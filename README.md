@@ -11,7 +11,7 @@ make build
 
 Use with fluent-bit:
 
-`fluent-bit -c examples/flb_example.conf`
+`fluent-bit -e ydb_plugin.so -c examples/flb_example.conf`
 
 Configuration file (there is an example in files):
 ```
