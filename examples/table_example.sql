@@ -3,9 +3,10 @@ CREATE TABLE logging_example (
      metadata   String,
      message    Json,
      PRIMARY KEY (
-                  event_time
-         ))
+          event_time
+     )
+)
 PARTITION BY HASH(event_time, metadata)
 WITH (
-    STORE = COLUMN
-    )
+     STORE = COLUMN
+)
