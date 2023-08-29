@@ -1,36 +1,32 @@
-# fluent-bit-ydb
-Fluent-Bit go YDB output plugin
+# `fluent-bit-ydb` - Fluent-Bit [YDB](https://github.com/ydb-platform/ydb) output plugin 
 
-This is alpha version, use at your own risk.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/ydb-platform/ydb/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/ydb-platform/fluent-bit-ydb.svg?style=flat-square)](https://github.com/ydb-platform/fluent-bit-ydb/releases)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/ydb-platform/fluent-bit-ydb)](https://pkg.go.dev/github.com/ydb-platform/fluent-bit-ydb)
+![tests](https://github.com/ydb-platform/fluent-bit-ydb/workflows/tests/badge.svg?branch=master)
+![lint](https://github.com/ydb-platform/fluent-bit-ydb/workflows/lint/badge.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ydb-platform/fluent-bit-ydb)](https://goreportcard.com/report/github.com/ydb-platform/fluent-bit-ydb)
+[![codecov](https://codecov.io/gh/ydb-platform/fluent-bit-ydb/badge.svg?precision=2)](https://app.codecov.io/gh/ydb-platform/fluent-bit-ydb)
+![Code lines](https://sloc.xyz/github/ydb-platform/fluent-bit-ydb/?category=code)
+[![View examples](https://img.shields.io/badge/learn-examples-brightgreen.svg)](https://github.com/ydb-platform/fluent-bit-ydb/tree/master/examples)
+[![Telegram](https://img.shields.io/badge/chat-on%20Telegram-2ba2d9.svg)](https://t.me/ydb_en)
+[![WebSite](https://img.shields.io/badge/website-ydb.tech-blue.svg)](https://ydb.tech)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ydb-platform/fluent-bit-ydb/blob/master/CONTRIBUTING.md)
 
-Build:
+# Build
+
 ```makefile
 export BIN=ydb_plugin.so
 make build
 ```
 
-Use with fluent-bit:
+# Usage 
 
-`fluent-bit -e ydb_plugin.so -c examples/flb_example.conf`
+`fluent-bit -e ydb_plugin.so -c examples/ydb_plugin.conf`
 
 Configuration file (there is an example in files):
 ```
 ConnectionURL - connection url for YDB
-TableName - table name for logs.
-TablePath - table path with DB name.
-
-
-YDB_ANONYMOUS_CREDENTIALS 1
-YDB_SERVICE_ACCOUNT_KEY_CREDENTIALS 123456
-YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS 1.key
-YDB_ACCESS_TOKEN_CREDENTIALS 123456
-YDB_METADATA_CREDENTIALS 1
-- authentification params, read more there: https://ydb.tech/en/docs/reference/ydb-sdk/auth
-
-EventTimeColumnName - column for log time. Should be Timestamp type.
-EventMetadataColumnName - column for log metadata. Should be Optional<String> type.
-EventMessageColumnName - column for log message. Should be Optional<Json> type.
-
-ParseToColumns - TODO, currenty doesn't work. Will parse log message keys to separate columns.
-Example: {"key1": 123, "key2" : "value2"} - write 123 to column "key1" and "value2" to "key2"
+Certificates - path to file with certificates or certificate content
+TablePath - relative table path
 ```
