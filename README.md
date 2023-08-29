@@ -8,7 +8,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/ydb-platform/fluent-bit-ydb)](https://goreportcard.com/report/github.com/ydb-platform/fluent-bit-ydb)
 [![codecov](https://codecov.io/gh/ydb-platform/fluent-bit-ydb/badge.svg?precision=2)](https://app.codecov.io/gh/ydb-platform/fluent-bit-ydb)
 ![Code lines](https://sloc.xyz/github/ydb-platform/fluent-bit-ydb/?category=code)
-[![View examples](https://img.shields.io/badge/learn-examples-brightgreen.svg)](https://github.com/ydb-platform/fluent-bit-ydb/tree/master/examples)
 [![Telegram](https://img.shields.io/badge/chat-on%20Telegram-2ba2d9.svg)](https://t.me/ydb_en)
 [![WebSite](https://img.shields.io/badge/website-ydb.tech-blue.svg)](https://ydb.tech)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ydb-platform/fluent-bit-ydb/blob/master/CONTRIBUTING.md)
