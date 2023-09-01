@@ -1,9 +1,6 @@
 FROM golang:1.20-bullseye AS builder
 WORKDIR /build
 
-COPY go.mod go.sum ./
-RUN go mod download
-
 COPY . .
 
 RUN go build -buildmode=c-shared -o out_ydb.so
