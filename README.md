@@ -1,4 +1,4 @@
-# `fluent-bit-ydb` - Fluent-Bit [YDB](https://github.com/ydb-platform/ydb) output plugin 
+# `fluent-bit-ydb` - [Fluent Bit](https://fluentbit.io) [output](https://docs.fluentbit.io/manual/concepts/data-pipeline/output) for [YDB](https://github.com/ydb-platform/ydb).
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/ydb-platform/ydb/blob/main/LICENSE)
 [![Release](https://img.shields.io/github/v/release/ydb-platform/fluent-bit-ydb.svg?style=flat-square)](https://github.com/ydb-platform/fluent-bit-ydb/releases)
@@ -13,16 +13,16 @@
 [![WebSite](https://img.shields.io/badge/website-ydb.tech-blue.svg)](https://ydb.tech)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ydb-platform/fluent-bit-ydb/blob/master/CONTRIBUTING.md)
 
-# Build
+## Build
 
 ```makefile
-export BIN=ydb_plugin.so
+export BIN=out_ydb.so
 make build
 ```
 
 # Usage 
 
-`fluent-bit -e ydb_plugin.so -c examples/ydb_plugin.conf`
+`fluent-bit -e out_ydb.so -c examples/tail2ydb.conf`
 
 Configuration file (there is an example in files):
 ```

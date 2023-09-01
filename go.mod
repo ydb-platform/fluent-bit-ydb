@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
 	github.com/stretchr/testify v1.8.3
-	github.com/ydb-platform/ydb-go-sdk/v3 v3.49.1
+	github.com/ydb-platform/ydb-go-sdk/v3 v3.51.2
 	github.com/ydb-platform/ydb-go-yc v0.12.1
 )
 
