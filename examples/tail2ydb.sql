@@ -1,4 +1,4 @@
-CREATE TABLE `fluentbit/log` (
+CREATE TABLE `fluent/bit/log` (
      `timestamp`  Timestamp NOT NULL,
      `input`   Text NOT NULL,
      `message`    Text NOT NULL,
