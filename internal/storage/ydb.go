@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"reflect"
 	"time"
 
 	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
@@ -121,7 +122,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 		default:
 			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, toType)
 		}
-	case map[string]interface{}:
+	case map[interface{}]interface{}:
 		j, err := json.Marshal(v)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal json value: %+v", err)
@@ -138,7 +139,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, toType)
 		}
 	default:
-		return nil, fmt.Errorf("not supported source type '%s'", v)
+		return nil, fmt.Errorf("not supported source type '%s', type: %s", v, reflect.TypeOf(v))
 	}
 }
 
