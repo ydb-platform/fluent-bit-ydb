@@ -123,9 +123,9 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, toType)
 		}
 	case map[interface{}]interface{}:
-		j, err := json.Marshal(v)
+		j, err := json.Marshal(convert(v))
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal json value: %+v", err)
+			return nil, fmt.Errorf("failed to marshal json value: %+v. Value: %#v", err, v)
 		}
 
 		switch toType {
@@ -213,4 +213,18 @@ func validateColumns(columns map[string]types.Type, mapping map[string]model.Col
 		}
 	}
 	return nil
+}
+
+func convert(in map[interface{}]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(in))
+
+	for key, value := range in {
+		if valueMap, ok := value.(map[interface{}]interface{}); ok {
+			out[key.(string)] = convert(valueMap)
+		} else {
+			out[key.(string)] = value
+		}
+	}
+
+	return out
 }
