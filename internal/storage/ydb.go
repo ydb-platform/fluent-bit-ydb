@@ -219,10 +219,15 @@ func convert(in map[interface{}]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(in))
 
 	for key, value := range in {
-		if valueMap, ok := value.(map[interface{}]interface{}); ok {
-			out[key.(string)] = convert(valueMap)
-		} else {
-			out[key.(string)] = value
+		key := key.(string)
+
+		switch value := value.(type) {
+		case map[interface{}]interface{}:
+			out[key] = convert(value)
+		case []byte:
+			out[key] = string(value)
+		default:
+			out[key] = value
 		}
 	}
 
