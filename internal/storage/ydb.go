@@ -2,9 +2,11 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
+	"reflect"
 	"time"
 
 	"github.com/ydb-platform/ydb-go-sdk/v3"
@@ -12,6 +14,7 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
+	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
 )
 
@@ -88,6 +91,7 @@ func New(cfg *config.Config) (*YDB, error) {
 const (
 	textType      = "Text"
 	bytesType     = "Bytes"
+	jsonType      = "Json"
 	timestampType = "Timestamp"
 )
 
@@ -98,7 +102,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 		case timestampType:
 			return types.TimestampValueFromTime(v), nil
 		default:
-			return nil, fmt.Errorf("not supported convertation from '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, toType)
 		}
 	case []byte:
 		switch toType {
@@ -107,7 +111,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 		case textType:
 			return types.TextValue(string(v)), nil
 		default:
-			return nil, fmt.Errorf("not supported convertation from '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, toType)
 		}
 	case string:
 		switch toType {
@@ -116,10 +120,26 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 		case textType:
 			return types.TextValue(v), nil
 		default:
-			return nil, fmt.Errorf("not supported convertation from '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, toType)
+		}
+	case map[interface{}]interface{}:
+		j, err := json.Marshal(convertByteFieldsToString(v))
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, v)
+		}
+
+		switch toType {
+		case bytesType:
+			return types.BytesValue(j), nil
+		case textType:
+			return types.TextValue(string(j)), nil
+		case jsonType:
+			return types.JSONValue(string(j)), nil
+		default:
+			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, toType)
 		}
 	default:
-		return nil, fmt.Errorf("not supported source type '%s'", v)
+		return nil, fmt.Errorf("not supported source type '%s', type: %s", v, reflect.TypeOf(v))
 	}
 }
 
@@ -142,7 +162,13 @@ func (s *YDB) Write(events []*model.Event) error {
 		columns = append(columns, types.StructFieldValue(s.cfg.Columns[config.KeyInput].Name, v))
 
 		for k, value := range event.Message {
-			v, err := type2Type(s.cfg.Columns[k].Type, value)
+			column, exists := s.cfg.Columns[k]
+			if !exists {
+				log.Warn(fmt.Sprintf("column for message key: %s (value: %s) not found, skip", k, value))
+				continue
+			}
+
+			v, err := type2Type(column.Type, value)
 			if err != nil {
 				return err
 			}
@@ -187,4 +213,23 @@ func validateColumns(columns map[string]types.Type, mapping map[string]model.Col
 		}
 	}
 	return nil
+}
+
+func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(in))
+
+	for key, value := range in {
+		key := key.(string)
+
+		switch value := value.(type) {
+		case map[interface{}]interface{}:
+			out[key] = convertByteFieldsToString(value)
+		case []byte:
+			out[key] = string(value)
+		default:
+			out[key] = value
+		}
+	}
+
+	return out
 }
