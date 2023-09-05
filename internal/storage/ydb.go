@@ -123,7 +123,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, toType)
 		}
 	case map[interface{}]interface{}:
-		j, err := json.Marshal(convertBytesFieldToString(v))
+		j, err := json.Marshal(convertByteFieldsToString(v))
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, v)
 		}
@@ -215,7 +215,7 @@ func validateColumns(columns map[string]types.Type, mapping map[string]model.Col
 	return nil
 }
 
-func convertBytesFieldToString(in map[interface{}]interface{}) map[string]interface{} {
+func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(in))
 
 	for key, value := range in {
@@ -223,7 +223,7 @@ func convertBytesFieldToString(in map[interface{}]interface{}) map[string]interf
 
 		switch value := value.(type) {
 		case map[interface{}]interface{}:
-			out[key] = convertBytesFieldToString(value)
+			out[key] = convertByteFieldsToString(value)
 		case []byte:
 			out[key] = string(value)
 		default:

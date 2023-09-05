@@ -78,7 +78,7 @@ func TestConvertJson(t *testing.T) {
 		`ate-generation":"10"},"namespace_name":"fluent-bit","pod_id":"0eb60abf-d4f3-4ca8-8d34-ff1b3879aba1","` +
 		`pod_name":"fluent-bit-dt99n"}`
 
-	actual, err := json.Marshal(convertBytesFieldToString(v))
+	actual, err := json.Marshal(convertByteFieldsToString(v))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, string(actual))
