@@ -125,7 +125,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 	case map[interface{}]interface{}:
 		j, err := json.Marshal(convert(v))
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal json value: %+v. Value: %#v", err, v)
+			return nil, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, v)
 		}
 
 		switch toType {
