@@ -9,12 +9,12 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
+	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
 )
 
