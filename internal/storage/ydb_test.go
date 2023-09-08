@@ -109,6 +109,14 @@ func TestType2TypeOk(t *testing.T) {
 			value:    map[interface{}]interface{}{"some": 1, "other": "two"},
 			expected: types.JSONValue(`{"other":"two","some":1}`),
 		},
+		{
+			name: "convert string to optional text",
+			column: model.Column{
+				Type: "Optional<Text>",
+			},
+			value:    "some",
+			expected: types.NullableTextValue(pointer("some")),
+		},
 	}
 
 	for _, tc := range cases {

@@ -12,3 +12,10 @@ type Column struct {
 func (c Column) IsOptional() bool {
 	return strings.HasPrefix(c.Type, "Optional<") && strings.HasSuffix(c.Type, ">")
 }
+
+func (c Column) GetType() string {
+	if c.IsOptional() {
+		return strings.Replace(strings.Replace(c.Type, "Optional<", "", -1), ">", "", -1)
+	}
+	return c.Type
+}
