@@ -95,32 +95,32 @@ const (
 	timestampType = "Timestamp"
 )
 
-func type2Type(toType string, v interface{}) (types.Value, error) {
+func type2Type(c model.Column, v interface{}) (types.Value, error) {
 	switch v := v.(type) {
 	case time.Time:
-		switch toType {
+		switch c.Type {
 		case timestampType:
 			return types.TimestampValueFromTime(v), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, c.Type)
 		}
 	case []byte:
-		switch toType {
+		switch c.Type {
 		case bytesType:
 			return types.BytesValue(v), nil
 		case textType:
 			return types.TextValue(string(v)), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, c.Type)
 		}
 	case string:
-		switch toType {
+		switch c.Type {
 		case bytesType:
 			return types.BytesValueFromString(v), nil
 		case textType:
 			return types.TextValue(v), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, c.Type)
 		}
 	case map[interface{}]interface{}:
 		j, err := json.Marshal(convertByteFieldsToString(v))
@@ -128,7 +128,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 			return nil, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, v)
 		}
 
-		switch toType {
+		switch c.Type {
 		case bytesType:
 			return types.BytesValue(j), nil
 		case textType:
@@ -136,7 +136,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 		case jsonType:
 			return types.JSONValueFromBytes(j), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, toType)
+			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, c.Type)
 		}
 	default:
 		return nil, fmt.Errorf("not supported source type '%s', type: %s", v, reflect.TypeOf(v))
@@ -149,13 +149,13 @@ func (s *YDB) Write(events []*model.Event) error {
 	for _, event := range events {
 		columns := make([]types.StructValueOption, 0, len(event.Message)+2)
 
-		v, err := type2Type(s.cfg.Columns[config.KeyTimestamp].Type, event.Timestamp)
+		v, err := type2Type(s.cfg.Columns[config.KeyTimestamp], event.Timestamp)
 		if err != nil {
 			return err
 		}
 		columns = append(columns, types.StructFieldValue(s.cfg.Columns[config.KeyTimestamp].Name, v))
 
-		v, err = type2Type(s.cfg.Columns[config.KeyInput].Type, event.Metadata)
+		v, err = type2Type(s.cfg.Columns[config.KeyInput], event.Metadata)
 		if err != nil {
 			return err
 		}
@@ -168,7 +168,7 @@ func (s *YDB) Write(events []*model.Event) error {
 				continue
 			}
 
-			v, err := type2Type(column.Type, value)
+			v, err := type2Type(column, value)
 			if err != nil {
 				return err
 			}
