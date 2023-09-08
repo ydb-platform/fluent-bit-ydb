@@ -134,7 +134,7 @@ func type2Type(toType string, v interface{}) (types.Value, error) {
 		case textType:
 			return types.TextValue(string(j)), nil
 		case jsonType:
-			return types.JSONValue(string(j)), nil
+			return types.JSONValueFromBytes(j), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, toType)
 		}
