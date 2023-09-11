@@ -100,25 +100,25 @@ func type2Type(c model.Column, v interface{}) (types.Value, error) {
 	case time.Time:
 		switch c.GetType() {
 		case timestampType:
-			return convertIfOptionalValue(c, types.TimestampValueFromTime(v)), nil
+			return convertIfOptionalColumn(c, types.TimestampValueFromTime(v)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, c.Type)
 		}
 	case []byte:
 		switch c.GetType() {
 		case bytesType:
-			return convertIfOptionalValue(c, types.BytesValue(v)), nil
+			return convertIfOptionalColumn(c, types.BytesValue(v)), nil
 		case textType:
-			return convertIfOptionalValue(c, types.TextValue(string(v))), nil
+			return convertIfOptionalColumn(c, types.TextValue(string(v))), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, c.Type)
 		}
 	case string:
 		switch c.GetType() {
 		case bytesType:
-			return convertIfOptionalValue(c, types.BytesValueFromString(v)), nil
+			return convertIfOptionalColumn(c, types.BytesValueFromString(v)), nil
 		case textType:
-			return convertIfOptionalValue(c, types.TextValue(v)), nil
+			return convertIfOptionalColumn(c, types.TextValue(v)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, c.Type)
 		}
@@ -130,11 +130,11 @@ func type2Type(c model.Column, v interface{}) (types.Value, error) {
 
 		switch c.GetType() {
 		case bytesType:
-			return convertIfOptionalValue(c, types.BytesValue(j)), nil
+			return convertIfOptionalColumn(c, types.BytesValue(j)), nil
 		case textType:
-			return convertIfOptionalValue(c, types.TextValue(string(j))), nil
+			return convertIfOptionalColumn(c, types.TextValue(string(j))), nil
 		case jsonType:
-			return convertIfOptionalValue(c, types.JSONValueFromBytes(j)), nil
+			return convertIfOptionalColumn(c, types.JSONValueFromBytes(j)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, c.Type)
 		}
@@ -234,7 +234,7 @@ func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interf
 	return out
 }
 
-func convertIfOptionalValue(c model.Column, v types.Value) types.Value {
+func convertIfOptionalColumn(c model.Column, v types.Value) types.Value {
 	if c.IsOptional() {
 		return types.OptionalValue(v)
 	}
