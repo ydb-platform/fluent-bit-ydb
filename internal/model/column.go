@@ -15,7 +15,7 @@ func (c Column) IsOptional() bool {
 
 func (c Column) GetType() string {
 	if c.IsOptional() {
-		return strings.Replace(strings.Replace(c.Type, "Optional<", "", -1), ">", "", -1)
+		return strings.ReplaceAll(strings.ReplaceAll(c.Type, "Optional<", ""), ">", "")
 	}
 	return c.Type
 }
