@@ -125,17 +125,17 @@ type Config struct {
 }
 
 func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error) {
-	credentials := make(map[string]credentials.Credentials, len(credentialsChooser))
+	creds := make(map[string]credentials.Credentials, len(credentialsChooser))
 	for paramName, description := range credentialsChooser {
 		value := output.FLBPluginConfigKey(plugin, paramName)
 		if value != "" {
-			credentials[paramName], err = description.make(value)
+			creds[paramName], err = description.make(value)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create credentials: %w. %s", err, description.about())
 			}
 		}
 	}
-	switch len(credentials) {
+	switch len(creds) {
 	case 0:
 		return nil, fmt.Errorf("require one of credentials params: %v",
 			func() (params []string) {
@@ -147,7 +147,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 			}(),
 		)
 	case 1:
-		for _, v := range credentials {
+		for _, v := range creds {
 			c = v
 			break
 		}
@@ -155,7 +155,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 	default:
 		return nil, fmt.Errorf("require only one of credentials params: %v",
 			func() (params []string) {
-				for paramName := range credentials {
+				for paramName := range creds {
 					params = append(params, paramName)
 				}
 				sort.Strings(params)
@@ -247,11 +247,11 @@ func ReadConfigFromPlugin(plugin unsafe.Pointer) (cfg Config, _ error) {
 	cfg.Columns = columns
 
 	// credentials
-	credentials, err := ydbCredentials(plugin)
+	creds, err := ydbCredentials(plugin)
 	if err != nil {
 		return cfg, fmt.Errorf("required valid credentials")
 	}
-	cfg.Credentials = credentials
+	cfg.Credentials = creds
 
 	return cfg, nil
 }
