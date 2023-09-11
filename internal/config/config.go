@@ -206,7 +206,7 @@ func ydbColumns(plugin unsafe.Pointer) (columns map[string]model.Column, _ error
 
 	var errs []error
 	for k := range columns {
-		if !isValidYdbType(columns[k].Type) {
+		if !isValidYdbType(columns[k].GetType()) {
 			errs = append(errs, fmt.Errorf("type '%s' of column '%s' not valid", k, columns[k].Type))
 		}
 	}
