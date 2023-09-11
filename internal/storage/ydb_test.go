@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+
+	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
 )
 
 func TestConvertJson(t *testing.T) {
