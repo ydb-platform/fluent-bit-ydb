@@ -201,9 +201,22 @@ func (s *YDB) Write(events []*model.Event) error {
 		rows = append(rows, types.StructValue(columns...))
 	}
 
-	return s.db.Table().Do(context.Background(), func(ctx context.Context, sess table.Session) error {
-		return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(rows...))
-	})
+	err := s.db.Table().Do(context.Background(),
+		func(ctx context.Context, sess table.Session) error {
+			return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(rows...))
+		},
+	)
+
+	if ydb.IsOperationErrorSchemeError(err) {
+		log.Warn("Detected scheme error, trying to resolve field mapping from table description")
+		fieldMapping, err := s.resolveFieldMapping(context.Background())
+		if err != nil {
+			return err
+		}
+		s.fieldMapping = fieldMapping
+	}
+
+	return err
 }
 
 func (s *YDB) Exit() error {
