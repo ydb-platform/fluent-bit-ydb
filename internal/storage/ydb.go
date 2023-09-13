@@ -61,11 +61,9 @@ func New(cfg *config.Config) (*YDB, error) {
 		cfg: cfg,
 	}
 
-	fieldMapping, err := s.resolveFieldMapping(ctx)
-	if err != nil {
+	if err := s.resolveFieldMapping(ctx); err != nil {
 		return s, err
 	}
-	s.fieldMapping = fieldMapping
 
 	return s, nil
 }
@@ -77,7 +75,7 @@ const (
 	timestampType = "Timestamp"
 )
 
-func (s *YDB) resolveFieldMapping(ctx context.Context) (map[string]options.Column, error) {
+func (s *YDB) resolveFieldMapping(ctx context.Context) error {
 	var columns map[string]options.Column
 
 	// Getting table columns names and types.
@@ -97,21 +95,23 @@ func (s *YDB) resolveFieldMapping(ctx context.Context) (map[string]options.Colum
 			return nil
 		},
 	); err != nil {
-		return nil, fmt.Errorf("failed to check columns names and types: %w", err)
+		return fmt.Errorf("failed to check columns names and types: %w", err)
 	}
 
 	// Define log fields to columns mapping.
 	fieldToColumnMapping := make(map[string]options.Column, len(s.cfg.Columns))
 
-	for field := range columns {
-		_, has := columns[columns[field].Name]
+	for field, column := range s.cfg.Columns {
+		_, has := columns[column.Name]
 		if !has {
-			return nil, fmt.Errorf("not found column '%s' in destination table for field %s", columns[field].Name, field)
+			return fmt.Errorf("not found column '%s' in destination table for field %s", column.Name, field)
 		}
-		fieldToColumnMapping[field] = columns[columns[field].Name]
+		fieldToColumnMapping[field] = columns[column.Name]
 	}
 
-	return fieldToColumnMapping, nil
+	s.fieldMapping = fieldToColumnMapping
+
+	return nil
 }
 
 func type2Type(t types.Type, v interface{}) (types.Value, error) {
@@ -208,11 +208,10 @@ func (s *YDB) Write(events []*model.Event) error {
 
 	if ydb.IsOperationErrorSchemeError(err) {
 		log.Warn("Detected scheme error, trying to resolve field mapping from table description")
-		fieldMapping, resolveErr := s.resolveFieldMapping(context.Background())
+		resolveErr := s.resolveFieldMapping(context.Background())
 		if resolveErr != nil {
 			return errors.Join(err, resolveErr)
 		}
-		s.fieldMapping = fieldMapping
 	}
 
 	return err
