@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -77,9 +78,7 @@ const (
 )
 
 func (s *YDB) resolveFieldMapping(ctx context.Context) (map[string]options.Column, error) {
-	var (
-		columns map[string]options.Column
-	)
+	var columns map[string]options.Column
 
 	// Getting table columns names and types.
 	if err := s.db.Table().Do(ctx,
@@ -209,9 +208,9 @@ func (s *YDB) Write(events []*model.Event) error {
 
 	if ydb.IsOperationErrorSchemeError(err) {
 		log.Warn("Detected scheme error, trying to resolve field mapping from table description")
-		fieldMapping, err := s.resolveFieldMapping(context.Background())
-		if err != nil {
-			return err
+		fieldMapping, resolveErr := s.resolveFieldMapping(context.Background())
+		if resolveErr != nil {
+			return errors.Join(err, resolveErr)
 		}
 		s.fieldMapping = fieldMapping
 	}
