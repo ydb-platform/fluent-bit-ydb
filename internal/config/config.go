@@ -165,21 +165,6 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 	}
 }
 
-func isValidYdbType(t string) bool {
-	switch t {
-	case "Text", "Utf8":
-		return true
-	case "String", "Bytes":
-		return true
-	case "Json":
-		return true
-	case "Timestamp":
-		return true
-	default:
-		return false
-	}
-}
-
 func ydbColumns(plugin unsafe.Pointer) (columns map[string]model.Column, _ error) {
 	columnsValue := output.FLBPluginConfigKey(plugin, ParamColumns)
 
@@ -202,17 +187,6 @@ func ydbColumns(plugin unsafe.Pointer) (columns map[string]model.Column, _ error
 
 	if _, has := columns[KeyInput]; !has {
 		return nil, fmt.Errorf("no required column '%s'", KeyInput)
-	}
-
-	var errs []error
-	for k := range columns {
-		if !isValidYdbType(columns[k].GetType()) {
-			errs = append(errs, fmt.Errorf("type '%s' of column '%s' not valid", k, columns[k].Type))
-		}
-	}
-
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("%v", errs)
 	}
 
 	return columns, nil

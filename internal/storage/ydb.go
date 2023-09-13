@@ -11,6 +11,7 @@ import (
 
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
@@ -31,7 +32,7 @@ var (
 type YDB struct {
 	db           *ydb.Driver
 	cfg          *config.Config
-	tableColumns map[string]types.Type // {columnName : type}.
+	fieldMapping map[string]options.Column // {fieldName : Column}
 }
 
 func New(cfg *config.Config) (*YDB, error) {
@@ -59,6 +60,8 @@ func New(cfg *config.Config) (*YDB, error) {
 		cfg: cfg,
 	}
 
+	var columns map[string]options.Column
+
 	// Getting table columns names and types.
 	if err = db.Table().Do(ctx,
 		func(ctx context.Context, s table.Session) (err error) {
@@ -67,10 +70,10 @@ func New(cfg *config.Config) (*YDB, error) {
 				return fmt.Errorf("failed to describe table `%s`: %w", path.Join(db.Name(), cfg.TablePath), err)
 			}
 
-			ydb.tableColumns = make(map[string]types.Type, len(desc.Columns))
+			columns = make(map[string]options.Column, len(desc.Columns))
 
-			for i := range desc.Columns {
-				ydb.tableColumns[desc.Columns[i].Name] = desc.Columns[i].Type
+			for _, column := range desc.Columns {
+				columns[column.Name] = column
 			}
 
 			return nil
@@ -79,11 +82,12 @@ func New(cfg *config.Config) (*YDB, error) {
 		return nil, fmt.Errorf("failed to check columns names and types: %w", err)
 	}
 
-	// Checking for valid table for writing.
-	err = validateColumns(ydb.tableColumns, cfg.Columns)
+	// Define log fields to columns mapping.
+	mapping, err := ydbFieldMapping(columns, cfg.Columns)
 	if err != nil {
 		return ydb, err
 	}
+	ydb.fieldMapping = mapping
 
 	return ydb, nil
 }
@@ -95,30 +99,33 @@ const (
 	timestampType = "Timestamp"
 )
 
-func type2Type(c model.Column, v interface{}) (types.Value, error) {
+func type2Type(c options.Column, v interface{}) (types.Value, error) {
+	optional, columnType := columnTypeIfOptional(c)
+	columnTypeYql := yqlType(columnType)
+
 	switch v := v.(type) {
 	case time.Time:
-		switch c.GetType() {
+		switch columnTypeYql {
 		case timestampType:
-			return convertIfOptionalColumn(c, types.TimestampValueFromTime(v)), nil
+			return convertIfColumnOptional(optional, types.TimestampValueFromTime(v)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, c.Type)
 		}
 	case []byte:
-		switch c.GetType() {
+		switch columnTypeYql {
 		case bytesType:
-			return convertIfOptionalColumn(c, types.BytesValue(v)), nil
+			return convertIfColumnOptional(optional, types.BytesValue(v)), nil
 		case textType:
-			return convertIfOptionalColumn(c, types.TextValue(string(v))), nil
+			return convertIfColumnOptional(optional, types.TextValue(string(v))), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, c.Type)
 		}
 	case string:
-		switch c.GetType() {
+		switch columnTypeYql {
 		case bytesType:
-			return convertIfOptionalColumn(c, types.BytesValueFromString(v)), nil
+			return convertIfColumnOptional(optional, types.BytesValueFromString(v)), nil
 		case textType:
-			return convertIfOptionalColumn(c, types.TextValue(v)), nil
+			return convertIfColumnOptional(optional, types.TextValue(v)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, c.Type)
 		}
@@ -128,13 +135,13 @@ func type2Type(c model.Column, v interface{}) (types.Value, error) {
 			return nil, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, v)
 		}
 
-		switch c.GetType() {
+		switch columnTypeYql {
 		case bytesType:
-			return convertIfOptionalColumn(c, types.BytesValue(j)), nil
+			return convertIfColumnOptional(optional, types.BytesValue(j)), nil
 		case textType:
-			return convertIfOptionalColumn(c, types.TextValue(string(j))), nil
+			return convertIfColumnOptional(optional, types.TextValue(string(j))), nil
 		case jsonType:
-			return convertIfOptionalColumn(c, types.JSONValueFromBytes(j)), nil
+			return convertIfColumnOptional(optional, types.JSONValueFromBytes(j)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, c.Type)
 		}
@@ -149,22 +156,22 @@ func (s *YDB) Write(events []*model.Event) error {
 	for _, event := range events {
 		columns := make([]types.StructValueOption, 0, len(event.Message)+2)
 
-		v, err := type2Type(s.cfg.Columns[config.KeyTimestamp], event.Timestamp)
+		v, err := type2Type(s.fieldMapping[config.KeyTimestamp], event.Timestamp)
 		if err != nil {
 			return err
 		}
-		columns = append(columns, types.StructFieldValue(s.cfg.Columns[config.KeyTimestamp].Name, v))
+		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyTimestamp].Name, v))
 
-		v, err = type2Type(s.cfg.Columns[config.KeyInput], event.Metadata)
+		v, err = type2Type(s.fieldMapping[config.KeyInput], event.Metadata)
 		if err != nil {
 			return err
 		}
-		columns = append(columns, types.StructFieldValue(s.cfg.Columns[config.KeyInput].Name, v))
+		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyInput].Name, v))
 
-		for k, value := range event.Message {
-			column, exists := s.cfg.Columns[k]
+		for field, value := range event.Message {
+			column, exists := s.fieldMapping[field]
 			if !exists {
-				log.Warn(fmt.Sprintf("column for message key: %s (value: %s) not found, skip", k, value))
+				log.Warn(fmt.Sprintf("column for message key: %s (value: %s) not found, skip", field, value))
 				continue
 			}
 
@@ -172,7 +179,7 @@ func (s *YDB) Write(events []*model.Event) error {
 			if err != nil {
 				return err
 			}
-			columns = append(columns, types.StructFieldValue(s.cfg.Columns[k].Name, v))
+			columns = append(columns, types.StructFieldValue(s.fieldMapping[field].Name, v))
 		}
 
 		rows = append(rows, types.StructValue(columns...))
@@ -198,21 +205,18 @@ func yqlType(t types.Type) string {
 	}
 }
 
-func validateColumns(columns map[string]types.Type, mapping map[string]model.Column) error {
-	for key := range mapping {
-		t, has := columns[mapping[key].Name]
+func ydbFieldMapping(columns map[string]options.Column, columnMapping map[string]model.Column) (map[string]options.Column, error) {
+	fieldToColumnMapping := make(map[string]options.Column, len(columnMapping))
+
+	for field, column := range columnMapping {
+		_, has := columns[column.Name]
 		if !has {
-			return fmt.Errorf("not found column '%s' in destination table", mapping[key].Name)
+			return nil, fmt.Errorf("not found column '%s' in destination table for field %s", column.Name, field)
 		}
-		if mapping[key].Type != yqlType(t) {
-			return fmt.Errorf("wrong type of column '%s': '%s' (expected '%s')",
-				mapping[key].Name,
-				yqlType(t),
-				mapping[key].Type,
-			)
-		}
+		fieldToColumnMapping[field] = columns[column.Name]
 	}
-	return nil
+
+	return fieldToColumnMapping, nil
 }
 
 func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interface{} {
@@ -234,8 +238,16 @@ func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interf
 	return out
 }
 
-func convertIfOptionalColumn(c model.Column, v types.Value) types.Value {
-	if c.IsOptional() {
+func columnTypeIfOptional(c options.Column) (bool, types.Type) {
+	optional, innerType := types.IsOptional(c.Type)
+	if optional {
+		return optional, innerType
+	}
+	return false, c.Type
+}
+
+func convertIfColumnOptional(optional bool, v types.Value) types.Value {
+	if optional {
 		return types.OptionalValue(v)
 	}
 	return v
