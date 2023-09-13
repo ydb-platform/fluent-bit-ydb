@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
+
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
@@ -89,25 +89,25 @@ func TestConvertJson(t *testing.T) {
 func TestType2TypeOk(t *testing.T) {
 	cases := []struct {
 		name     string
-		column   options.Column
+		column   types.Type
 		value    interface{}
 		expected types.Value
 	}{
 		{
 			name:     "convert string value to text",
-			column:   options.NewTableColumn("Test", types.TypeUTF8, "Test"),
+			column:   types.TypeText,
 			value:    "some",
 			expected: types.TextValue("some"),
 		},
 		{
 			name:     "convert map to json",
-			column:   options.NewTableColumn("Test", types.TypeJSON, "Test"),
+			column:   types.TypeJSON,
 			value:    map[interface{}]interface{}{"some": 1, "other": "two"},
 			expected: types.JSONValue(`{"other":"two","some":1}`),
 		},
 		{
 			name:     "convert string to optional text",
-			column:   options.NewTableColumn("Test", types.Optional(types.TypeUTF8), "Test"),
+			column:   types.Optional(types.TypeText),
 			value:    "some",
 			expected: types.NullableTextValue(pointer("some")),
 		},

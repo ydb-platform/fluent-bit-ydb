@@ -99,8 +99,8 @@ const (
 	timestampType = "Timestamp"
 )
 
-func type2Type(c options.Column, v interface{}) (types.Value, error) {
-	optional, columnType := convertTypeIfOptional(c.Type)
+func type2Type(t types.Type, v interface{}) (types.Value, error) {
+	optional, columnType := convertTypeIfOptional(t)
 	columnTypeYql := yqlType(columnType)
 
 	switch v := v.(type) {
@@ -109,7 +109,7 @@ func type2Type(c options.Column, v interface{}) (types.Value, error) {
 		case timestampType:
 			return convertValueIfOptional(optional, types.TimestampValueFromTime(v)), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, c.Type)
+			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	case []byte:
 		switch columnTypeYql {
@@ -118,7 +118,7 @@ func type2Type(c options.Column, v interface{}) (types.Value, error) {
 		case textType:
 			return convertValueIfOptional(optional, types.TextValue(string(v))), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, c.Type)
+			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	case string:
 		switch columnTypeYql {
@@ -127,7 +127,7 @@ func type2Type(c options.Column, v interface{}) (types.Value, error) {
 		case textType:
 			return convertValueIfOptional(optional, types.TextValue(v)), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, c.Type)
+			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	case map[interface{}]interface{}:
 		j, err := json.Marshal(convertByteFieldsToString(v))
@@ -143,7 +143,7 @@ func type2Type(c options.Column, v interface{}) (types.Value, error) {
 		case jsonType:
 			return convertValueIfOptional(optional, types.JSONValueFromBytes(j)), nil
 		default:
-			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, c.Type)
+			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	default:
 		return nil, fmt.Errorf("not supported source type '%s', type: %s", v, reflect.TypeOf(v))
@@ -156,13 +156,13 @@ func (s *YDB) Write(events []*model.Event) error {
 	for _, event := range events {
 		columns := make([]types.StructValueOption, 0, len(event.Message)+2)
 
-		v, err := type2Type(s.fieldMapping[config.KeyTimestamp], event.Timestamp)
+		v, err := type2Type(s.fieldMapping[config.KeyTimestamp].Type, event.Timestamp)
 		if err != nil {
 			return err
 		}
 		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyTimestamp].Name, v))
 
-		v, err = type2Type(s.fieldMapping[config.KeyInput], event.Metadata)
+		v, err = type2Type(s.fieldMapping[config.KeyInput].Type, event.Metadata)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func (s *YDB) Write(events []*model.Event) error {
 				continue
 			}
 
-			v, err := type2Type(column, value)
+			v, err := type2Type(column.Type, value)
 			if err != nil {
 				return err
 			}
