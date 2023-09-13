@@ -100,32 +100,32 @@ const (
 )
 
 func type2Type(c options.Column, v interface{}) (types.Value, error) {
-	optional, columnType := columnTypeIfOptional(c)
+	optional, columnType := convertTypeIfOptional(c.Type)
 	columnTypeYql := yqlType(columnType)
 
 	switch v := v.(type) {
 	case time.Time:
 		switch columnTypeYql {
 		case timestampType:
-			return convertIfColumnOptional(optional, types.TimestampValueFromTime(v)), nil
+			return convertValueIfOptional(optional, types.TimestampValueFromTime(v)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (time) from '%s' to '%s'", v, c.Type)
 		}
 	case []byte:
 		switch columnTypeYql {
 		case bytesType:
-			return convertIfColumnOptional(optional, types.BytesValue(v)), nil
+			return convertValueIfOptional(optional, types.BytesValue(v)), nil
 		case textType:
-			return convertIfColumnOptional(optional, types.TextValue(string(v))), nil
+			return convertValueIfOptional(optional, types.TextValue(string(v))), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s'", v, c.Type)
 		}
 	case string:
 		switch columnTypeYql {
 		case bytesType:
-			return convertIfColumnOptional(optional, types.BytesValueFromString(v)), nil
+			return convertValueIfOptional(optional, types.BytesValueFromString(v)), nil
 		case textType:
-			return convertIfColumnOptional(optional, types.TextValue(v)), nil
+			return convertValueIfOptional(optional, types.TextValue(v)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (string) from '%s' to '%s'", v, c.Type)
 		}
@@ -137,11 +137,11 @@ func type2Type(c options.Column, v interface{}) (types.Value, error) {
 
 		switch columnTypeYql {
 		case bytesType:
-			return convertIfColumnOptional(optional, types.BytesValue(j)), nil
+			return convertValueIfOptional(optional, types.BytesValue(j)), nil
 		case textType:
-			return convertIfColumnOptional(optional, types.TextValue(string(j))), nil
+			return convertValueIfOptional(optional, types.TextValue(string(j))), nil
 		case jsonType:
-			return convertIfColumnOptional(optional, types.JSONValueFromBytes(j)), nil
+			return convertValueIfOptional(optional, types.JSONValueFromBytes(j)), nil
 		default:
 			return nil, fmt.Errorf("not supported conversion (map) '%s' to '%s'", v, c.Type)
 		}
@@ -238,15 +238,15 @@ func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interf
 	return out
 }
 
-func columnTypeIfOptional(c options.Column) (bool, types.Type) {
-	optional, innerType := types.IsOptional(c.Type)
+func convertTypeIfOptional(t types.Type) (bool, types.Type) {
+	optional, inner := types.IsOptional(t)
 	if optional {
-		return optional, innerType
+		return optional, inner
 	}
-	return false, c.Type
+	return false, t
 }
 
-func convertIfColumnOptional(optional bool, v types.Value) types.Value {
+func convertValueIfOptional(optional bool, v types.Value) types.Value {
 	if optional {
 		return types.OptionalValue(v)
 	}
