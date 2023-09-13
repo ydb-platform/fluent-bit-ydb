@@ -60,14 +60,33 @@ func New(cfg *config.Config) (*YDB, error) {
 		cfg: cfg,
 	}
 
-	var columns map[string]options.Column
+	fieldMapping, err := s.resolveFieldMapping(ctx)
+	if err != nil {
+		return s, err
+	}
+	s.fieldMapping = fieldMapping
+
+	return s, nil
+}
+
+const (
+	textType      = "Text"
+	bytesType     = "Bytes"
+	jsonType      = "Json"
+	timestampType = "Timestamp"
+)
+
+func (s *YDB) resolveFieldMapping(ctx context.Context) (map[string]options.Column, error) {
+	var (
+		columns map[string]options.Column
+	)
 
 	// Getting table columns names and types.
-	if err = db.Table().Do(ctx,
-		func(ctx context.Context, s table.Session) (err error) {
-			desc, err := s.DescribeTable(ctx, path.Join(db.Name(), cfg.TablePath))
+	if err := s.db.Table().Do(ctx,
+		func(ctx context.Context, session table.Session) (err error) {
+			desc, err := session.DescribeTable(ctx, path.Join(s.db.Name(), s.cfg.TablePath))
 			if err != nil {
-				return fmt.Errorf("failed to describe table `%s`: %w", path.Join(db.Name(), cfg.TablePath), err)
+				return fmt.Errorf("failed to describe table `%s`: %w", path.Join(s.db.Name(), s.cfg.TablePath), err)
 			}
 
 			columns = make(map[string]options.Column, len(desc.Columns))
@@ -83,21 +102,18 @@ func New(cfg *config.Config) (*YDB, error) {
 	}
 
 	// Define log fields to columns mapping.
-	mapping, err := ydbFieldMapping(columns, cfg.Columns)
-	if err != nil {
-		return s, err
+	fieldToColumnMapping := make(map[string]options.Column, len(s.cfg.Columns))
+
+	for field, column := range columns {
+		_, has := columns[column.Name]
+		if !has {
+			return nil, fmt.Errorf("not found column '%s' in destination table for field %s", column.Name, field)
+		}
+		fieldToColumnMapping[field] = columns[column.Name]
 	}
-	s.fieldMapping = mapping
 
-	return s, nil
+	return fieldToColumnMapping, nil
 }
-
-const (
-	textType      = "Text"
-	bytesType     = "Bytes"
-	jsonType      = "Json"
-	timestampType = "Timestamp"
-)
 
 func type2Type(t types.Type, v interface{}) (types.Value, error) {
 	optional, columnType := convertTypeIfOptional(t)
@@ -203,23 +219,6 @@ func yqlType(t types.Type) string {
 	default:
 		return s
 	}
-}
-
-func ydbFieldMapping(
-	columns map[string]options.Column,
-	columnMapping map[string]model.Column,
-) (map[string]options.Column, error) {
-	fieldToColumnMapping := make(map[string]options.Column, len(columnMapping))
-
-	for field, column := range columnMapping {
-		_, has := columns[column.Name]
-		if !has {
-			return nil, fmt.Errorf("not found column '%s' in destination table for field %s", column.Name, field)
-		}
-		fieldToColumnMapping[field] = columns[column.Name]
-	}
-
-	return fieldToColumnMapping, nil
 }
 
 func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interface{} {
