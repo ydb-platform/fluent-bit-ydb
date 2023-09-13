@@ -72,8 +72,8 @@ func New(cfg *config.Config) (*YDB, error) {
 
 			columns = make(map[string]options.Column, len(desc.Columns))
 
-			for _, column := range desc.Columns {
-				columns[column.Name] = column
+			for i := range desc.Columns {
+				columns[desc.Columns[i].Name] = desc.Columns[i]
 			}
 
 			return nil
@@ -205,7 +205,10 @@ func yqlType(t types.Type) string {
 	}
 }
 
-func ydbFieldMapping(columns map[string]options.Column, columnMapping map[string]model.Column) (map[string]options.Column, error) {
+func ydbFieldMapping(
+	columns map[string]options.Column,
+	columnMapping map[string]model.Column,
+) (map[string]options.Column, error) {
 	fieldToColumnMapping := make(map[string]options.Column, len(columnMapping))
 
 	for field, column := range columnMapping {
