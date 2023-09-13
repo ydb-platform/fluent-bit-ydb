@@ -103,12 +103,12 @@ func (s *YDB) resolveFieldMapping(ctx context.Context) (map[string]options.Colum
 	// Define log fields to columns mapping.
 	fieldToColumnMapping := make(map[string]options.Column, len(s.cfg.Columns))
 
-	for field, column := range columns {
-		_, has := columns[column.Name]
+	for field := range columns {
+		_, has := columns[columns[field].Name]
 		if !has {
-			return nil, fmt.Errorf("not found column '%s' in destination table for field %s", column.Name, field)
+			return nil, fmt.Errorf("not found column '%s' in destination table for field %s", columns[field].Name, field)
 		}
-		fieldToColumnMapping[field] = columns[column.Name]
+		fieldToColumnMapping[field] = columns[columns[field].Name]
 	}
 
 	return fieldToColumnMapping, nil
