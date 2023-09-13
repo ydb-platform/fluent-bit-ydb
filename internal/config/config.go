@@ -11,8 +11,6 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/ydb-platform/ydb-go-sdk/v3/credentials"
 	yc "github.com/ydb-platform/ydb-go-yc"
-
-	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
 )
 
 const (
@@ -121,7 +119,7 @@ type Config struct {
 	Certificates  string
 	Credentials   credentials.Credentials
 	TablePath     string
-	Columns       map[string]model.Column
+	Columns       map[string]string
 }
 
 func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error) {
@@ -165,7 +163,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 	}
 }
 
-func ydbColumns(plugin unsafe.Pointer) (columns map[string]model.Column, _ error) {
+func ydbColumns(plugin unsafe.Pointer) (columns map[string]string, _ error) {
 	columnsValue := output.FLBPluginConfigKey(plugin, ParamColumns)
 
 	if isFile(columnsValue) {

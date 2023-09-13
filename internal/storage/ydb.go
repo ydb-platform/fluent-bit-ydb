@@ -102,11 +102,11 @@ func (s *YDB) resolveFieldMapping(ctx context.Context) error {
 	fieldToColumnMapping := make(map[string]options.Column, len(s.cfg.Columns))
 
 	for field, column := range s.cfg.Columns {
-		_, has := columns[column.Name]
+		_, has := columns[column]
 		if !has {
-			return fmt.Errorf("not found column '%s' in destination table for field %s", column.Name, field)
+			return fmt.Errorf("not found column '%s' in destination table for field %s", column, field)
 		}
-		fieldToColumnMapping[field] = columns[column.Name]
+		fieldToColumnMapping[field] = columns[column]
 	}
 
 	s.fieldMapping = fieldToColumnMapping
