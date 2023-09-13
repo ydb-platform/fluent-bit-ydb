@@ -55,7 +55,7 @@ func New(cfg *config.Config) (*YDB, error) {
 		return nil, err
 	}
 
-	ydb := &YDB{
+	s := &YDB{
 		db:  db,
 		cfg: cfg,
 	}
@@ -85,11 +85,11 @@ func New(cfg *config.Config) (*YDB, error) {
 	// Define log fields to columns mapping.
 	mapping, err := ydbFieldMapping(columns, cfg.Columns)
 	if err != nil {
-		return ydb, err
+		return s, err
 	}
-	ydb.fieldMapping = mapping
+	s.fieldMapping = mapping
 
-	return ydb, nil
+	return s, nil
 }
 
 const (
