@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
 func TestConvertJson(t *testing.T) {
@@ -82,4 +84,43 @@ func TestConvertJson(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, string(actual))
+}
+
+func TestType2TypeOk(t *testing.T) {
+	cases := []struct {
+		name     string
+		column   types.Type
+		value    interface{}
+		expected types.Value
+	}{
+		{
+			name:     "convert string value to text",
+			column:   types.TypeText,
+			value:    "some",
+			expected: types.TextValue("some"),
+		},
+		{
+			name:     "convert map to json",
+			column:   types.TypeJSON,
+			value:    map[interface{}]interface{}{"some": 1, "other": "two"},
+			expected: types.JSONValue(`{"other":"two","some":1}`),
+		},
+		{
+			name:     "convert string to optional text",
+			column:   types.Optional(types.TypeText),
+			value:    "some",
+			expected: types.NullableTextValue(pointer("some")),
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := type2Type(tc.column, tc.value)
+
+			assert.NoError(t, err)
+			assert.Equal(t, actual, tc.expected)
+		})
+	}
 }

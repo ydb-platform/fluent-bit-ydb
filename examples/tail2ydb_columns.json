@@ -1,14 +1,5 @@
 {
-  ".timestamp": {
-    "name": "timestamp",
-    "type": "Timestamp"
-  },
-  ".input": {
-    "name": "input",
-    "type": "Text"
-  },
-  "log": {
-    "name": "message",
-    "type": "Text"
-  }
+  ".timestamp": "timestamp",
+  ".input": "input",
+  "log": "message"
 }

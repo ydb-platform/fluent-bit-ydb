@@ -11,8 +11,6 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/ydb-platform/ydb-go-sdk/v3/credentials"
 	yc "github.com/ydb-platform/ydb-go-yc"
-
-	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
 )
 
 const (
@@ -121,21 +119,21 @@ type Config struct {
 	Certificates  string
 	Credentials   credentials.Credentials
 	TablePath     string
-	Columns       map[string]model.Column
+	Columns       map[string]string
 }
 
 func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error) {
-	credentials := make(map[string]credentials.Credentials, len(credentialsChooser))
+	creds := make(map[string]credentials.Credentials, len(credentialsChooser))
 	for paramName, description := range credentialsChooser {
 		value := output.FLBPluginConfigKey(plugin, paramName)
 		if value != "" {
-			credentials[paramName], err = description.make(value)
+			creds[paramName], err = description.make(value)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create credentials: %w. %s", err, description.about())
 			}
 		}
 	}
-	switch len(credentials) {
+	switch len(creds) {
 	case 0:
 		return nil, fmt.Errorf("require one of credentials params: %v",
 			func() (params []string) {
@@ -147,7 +145,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 			}(),
 		)
 	case 1:
-		for _, v := range credentials {
+		for _, v := range creds {
 			c = v
 			break
 		}
@@ -155,7 +153,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 	default:
 		return nil, fmt.Errorf("require only one of credentials params: %v",
 			func() (params []string) {
-				for paramName := range credentials {
+				for paramName := range creds {
 					params = append(params, paramName)
 				}
 				sort.Strings(params)
@@ -165,22 +163,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 	}
 }
 
-func isValidYdbType(t string) bool {
-	switch t {
-	case "Text", "Utf8":
-		return true
-	case "String", "Bytes":
-		return true
-	case "Json":
-		return true
-	case "Timestamp":
-		return true
-	default:
-		return false
-	}
-}
-
-func ydbColumns(plugin unsafe.Pointer) (columns map[string]model.Column, _ error) {
+func ydbColumns(plugin unsafe.Pointer) (columns map[string]string, _ error) {
 	columnsValue := output.FLBPluginConfigKey(plugin, ParamColumns)
 
 	if isFile(columnsValue) {
@@ -202,17 +185,6 @@ func ydbColumns(plugin unsafe.Pointer) (columns map[string]model.Column, _ error
 
 	if _, has := columns[KeyInput]; !has {
 		return nil, fmt.Errorf("no required column '%s'", KeyInput)
-	}
-
-	var errs []error
-	for k := range columns {
-		if !isValidYdbType(columns[k].Type) {
-			errs = append(errs, fmt.Errorf("type '%s' of column '%s' not valid", k, columns[k].Type))
-		}
-	}
-
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("%v", errs)
 	}
 
 	return columns, nil
@@ -247,11 +219,11 @@ func ReadConfigFromPlugin(plugin unsafe.Pointer) (cfg Config, _ error) {
 	cfg.Columns = columns
 
 	// credentials
-	credentials, err := ydbCredentials(plugin)
+	creds, err := ydbCredentials(plugin)
 	if err != nil {
 		return cfg, fmt.Errorf("required valid credentials")
 	}
-	cfg.Credentials = credentials
+	cfg.Credentials = creds
 
 	return cfg, nil
 }
