@@ -7,6 +7,7 @@ on:
         required: true
         type: choice
         options:
+          - MAJOR
           - PATCH
           - MINOR
       release-candidate:
@@ -43,6 +44,12 @@ jobs:
           MINOR=$(cat $VERSION_FILE | grep Minor | sed -e 's/^.*\ \(=\ \)*\(\"\)*\([0-9]*\)\(\"\)*.*/\3/g');
           PATCH=$(cat $VERSION_FILE | grep Patch | sed -e 's/^.*\ \(=\ \)*\(\"\)*\([0-9]*\)\(\"\)*.*/\3/g');
           LAST_TAG="v$MAJOR.$MINOR.$PATCH";
+          if [ "$VERSION_CHANGE" == "MAJOR" ]
+          then
+            MAJOR=$((MAJOR+1))
+            MINOR=0;
+            PATCH=0;
+          fi;
           if [ "$VERSION_CHANGE" = "MINOR" ]
           then
             MINOR=$((MINOR+1));
@@ -57,6 +64,7 @@ jobs:
             RC=$(git tag | grep "v$MAJOR.$MINOR.$PATCH-rc" | wc -l);
             TAG="v$MAJOR.$MINOR.$PATCH-rc$RC";
           else
+            sed -e 's/Major = "\([0-9]*\)"/Major = "'$MAJOR'"/g' -i $VERSION_FILE;
             sed -e 's/Minor = "\([0-9]*\)"/Minor = "'$MINOR'"/g' -i $VERSION_FILE;
             sed -e 's/Patch = "\([0-9]*\)"/Patch = "'$PATCH'"/g' -i $VERSION_FILE;
             git add $VERSION_FILE;
@@ -72,7 +80,7 @@ jobs:
           git tag $TAG
           git push --tags && git push
           CHANGELOG="$CHANGELOG
-          
+
           Full Changelog: [$LAST_TAG...$TAG](https://github.com/ydb-platform/ydb-go-sdk/compare/$LAST_TAG...$TAG)"
           if [ "$RELEASE_CANDIDATE" = true ]
           then
@@ -80,4 +88,3 @@ jobs:
           else
             gh release create $TAG -t "$TAG" --notes "$CHANGELOG"
           fi;
-        
