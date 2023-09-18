@@ -1,7 +1,7 @@
 package main
 
 const (
-	versionMajor = "0"
+	versionMajor = "1"
 	versionMinor = "0"
 	versionPatch = "0"
 )
