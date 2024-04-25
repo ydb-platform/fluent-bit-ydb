@@ -6,9 +6,11 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"unsafe"
 
 	"github.com/fluent/fluent-bit-go/output"
+	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/credentials"
 	yc "github.com/ydb-platform/ydb-go-yc"
 )
@@ -29,22 +31,24 @@ const (
 )
 
 type credentialsDescription struct {
-	make  func(value string) (credentials.Credentials, error)
+	make  func(value string) (ydb.Option, error)
 	about func() string
 }
 
 func isFile(path string) bool {
 	_, err := os.Stat(path)
+
 	return err == nil
 }
 
 var credentialsChooser = map[string]credentialsDescription{
 	ParamCredentialsYcServiceAccountKey: {
-		make: func(value string) (credentials.Credentials, error) {
+		make: func(value string) (ydb.Option, error) {
 			if isFile(value) {
-				return yc.NewClient(yc.WithServiceFile(value))
+				return yc.WithServiceAccountKeyFileCredentials(value), nil
 			}
-			return yc.NewClient(yc.WithServiceKey(value))
+
+			return yc.WithServiceAccountKeyCredentials(value), nil
 		},
 		about: func() string {
 			return fmt.Sprintf(
@@ -54,8 +58,8 @@ var credentialsChooser = map[string]credentialsDescription{
 		},
 	},
 	ParamCredentialsYcMetadata: {
-		make: func(value string) (credentials.Credentials, error) {
-			return yc.NewInstanceServiceAccount(), nil
+		make: func(value string) (ydb.Option, error) {
+			return yc.WithMetadataCredentials(), nil
 		},
 		about: func() string {
 			return fmt.Sprintf(
@@ -65,23 +69,27 @@ var credentialsChooser = map[string]credentialsDescription{
 		},
 	},
 	ParamCredentialsStatic: {
-		make: func(value string) (credentials.Credentials, error) {
+		make: func(value string) (ydb.Option, error) {
 			user, password, endpoint, err := parseParamCredentialsStaticValue(value)
 			if err != nil {
 				return nil, err
 			}
-			return credentials.NewStaticCredentials(user, password, endpoint), nil
+			if endpoint == "" {
+				return ydb.WithStaticCredentials(user, password), nil
+			}
+
+			return ydb.WithCredentials(credentials.NewStaticCredentials(user, password, endpoint)), nil
 		},
 		about: func() string {
 			return fmt.Sprintf(
-				"value of parameter '%s' must be a string with template 'user:password@auth_endpoint:port'",
+				"value of parameter '%s' must be a string with template 'user:password'",
 				ParamCredentialsStatic,
 			)
 		},
 	},
 	ParamCredentialsToken: {
-		make: func(value string) (credentials.Credentials, error) {
-			return credentials.NewAccessTokenCredentials(value), nil
+		make: func(value string) (ydb.Option, error) {
+			return ydb.WithAccessTokenCredentials(value), nil
 		},
 		about: func() string {
 			return fmt.Sprintf(
@@ -91,8 +99,8 @@ var credentialsChooser = map[string]credentialsDescription{
 		},
 	},
 	ParamCredentialsAnonymous: {
-		make: func(value string) (credentials.Credentials, error) {
-			return credentials.NewAnonymousCredentials(), nil
+		make: func(value string) (ydb.Option, error) {
+			return ydb.WithAnonymousCredentials(), nil
 		},
 		about: func() string {
 			return fmt.Sprintf(
@@ -104,26 +112,36 @@ var credentialsChooser = map[string]credentialsDescription{
 }
 
 func parseParamCredentialsStaticValue(value string) (user, password, endpoint string, _ error) {
-	u, err := url.Parse("blank://" + value)
+	if !strings.Contains(value, "://") {
+		value = "blank://" + value
+	}
+	if !strings.Contains(value, "@") {
+		value += "@endpoint"
+		defer func() {
+			endpoint = ""
+		}()
+	}
+	u, err := url.Parse(value)
 	if err != nil {
 		return "", "", "", err
 	}
 	user = u.User.Username()
 	password, _ = u.User.Password()
 	endpoint = u.Host
+
 	return
 }
 
 type Config struct {
-	ConnectionURL string
-	Certificates  string
-	Credentials   credentials.Credentials
-	TablePath     string
-	Columns       map[string]string
+	ConnectionURL     string
+	Certificates      string
+	CredentialsOption ydb.Option
+	TablePath         string
+	Columns           map[string]string
 }
 
-func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error) {
-	creds := make(map[string]credentials.Credentials, len(credentialsChooser))
+func ydbCredentials(plugin unsafe.Pointer) (c ydb.Option, err error) {
+	creds := make(map[string]ydb.Option, len(credentialsChooser))
 	for paramName, description := range credentialsChooser {
 		value := output.FLBPluginConfigKey(plugin, paramName)
 		if value != "" {
@@ -141,14 +159,17 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 					params = append(params, paramName)
 				}
 				sort.Strings(params)
+
 				return params
 			}(),
 		)
 	case 1:
 		for _, v := range creds {
 			c = v
+
 			break
 		}
+
 		return c, nil
 	default:
 		return nil, fmt.Errorf("require only one of credentials params: %v",
@@ -157,6 +178,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c credentials.Credentials, err error
 					params = append(params, paramName)
 				}
 				sort.Strings(params)
+
 				return params
 			}(),
 		)
@@ -223,7 +245,7 @@ func ReadConfigFromPlugin(plugin unsafe.Pointer) (cfg Config, _ error) {
 	if err != nil {
 		return cfg, fmt.Errorf("required valid credentials")
 	}
-	cfg.Credentials = creds
+	cfg.CredentialsOption = creds
 
 	return cfg, nil
 }

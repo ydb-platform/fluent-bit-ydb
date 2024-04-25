@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/ydb-platform/ydb-go-sdk/v3"
+	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
@@ -37,10 +37,10 @@ type YDB struct {
 }
 
 func New(cfg *config.Config) (*YDB, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:gomnd
 	defer cancel()
 
-	opts := []ydb.Option{ydb.WithCredentials(cfg.Credentials)}
+	opts := []ydb.Option{cfg.CredentialsOption}
 	if cfg.Certificates != "" {
 		_, err := os.Stat(cfg.Certificates)
 		if err == nil {
@@ -169,7 +169,7 @@ func (s *YDB) Write(events []*model.Event) error {
 	rows := make([]types.Value, 0, len(events))
 
 	for _, event := range events {
-		columns := make([]types.StructValueOption, 0, len(event.Message)+2)
+		columns := make([]types.StructValueOption, 0, len(event.Message)+2) //nolint:gomnd
 
 		v, err := type2Type(s.fieldMapping[config.KeyTimestamp].Type, event.Timestamp)
 		if err != nil {
@@ -187,6 +187,7 @@ func (s *YDB) Write(events []*model.Event) error {
 			column, exists := s.fieldMapping[field]
 			if !exists {
 				log.Warn(fmt.Sprintf("column for message key: %s (value: %s) not found, skip", field, value))
+
 				continue
 			}
 
@@ -256,6 +257,7 @@ func convertTypeIfOptional(t types.Type) (bool, types.Type) {
 	if optional {
 		return optional, inner
 	}
+
 	return false, t
 }
 
@@ -263,6 +265,7 @@ func convertValueIfOptional(optional bool, v types.Value) types.Value {
 	if optional {
 		return types.OptionalValue(v)
 	}
+
 	return v
 }
 

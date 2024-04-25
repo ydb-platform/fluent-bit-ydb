@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/stretchr/testify/require"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
@@ -82,8 +81,8 @@ func TestConvertJson(t *testing.T) {
 
 	actual, err := json.Marshal(convertByteFieldsToString(v))
 
-	assert.NoError(t, err)
-	assert.Equal(t, expected, string(actual))
+	require.NoError(t, err)
+	require.Equal(t, expected, string(actual))
 }
 
 func TestType2TypeOk(t *testing.T) {
@@ -119,8 +118,8 @@ func TestType2TypeOk(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := type2Type(tc.column, tc.value)
 
-			assert.NoError(t, err)
-			assert.Equal(t, actual, tc.expected)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

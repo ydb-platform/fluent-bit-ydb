@@ -24,12 +24,14 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	cfg, err := config.ReadConfigFromPlugin(plugin)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed read config: %v", err))
+
 		return output.FLB_ERROR
 	}
 
 	s, err := storage.New(&cfg)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed create new storage: %v", err))
+
 		return output.FLB_ERROR
 	}
 
@@ -80,6 +82,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 			key, ok := k.(string)
 			if !ok {
 				log.Warn(fmt.Sprintf("unknown type of key '%+v'", k))
+
 				continue
 			}
 			message[key] = v
@@ -97,6 +100,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 	err := s.Write(events)
 	if err != nil {
 		log.Error(fmt.Sprintf("write events failed: %v", err))
+
 		return output.FLB_ERROR
 	}
 
@@ -115,13 +119,16 @@ func FLBPluginExitCtx(ctx unsafe.Pointer) int {
 	})
 	if !ok {
 		log.Error("unknown storage object")
+
 		return output.FLB_ERROR
 	}
 	err := s.Exit()
 	if err != nil {
 		log.Error(fmt.Errorf("exit failed: %w", err).Error())
+
 		return output.FLB_ERROR
 	}
+
 	return output.FLB_OK
 }
 
