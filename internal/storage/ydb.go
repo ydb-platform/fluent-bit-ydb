@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/ydb-platform/ydb-go-sdk/v3"
+	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
@@ -40,7 +40,7 @@ func New(cfg *config.Config) (*YDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	opts := []ydb.Option{ydb.WithCredentials(cfg.Credentials)}
+	opts := []ydb.Option{cfg.CredentialsOption}
 	if cfg.Certificates != "" {
 		_, err := os.Stat(cfg.Certificates)
 		if err == nil {

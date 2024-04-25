@@ -28,6 +28,13 @@ func Test_parseParamCredentialsStaticValue(t *testing.T) {
 			endpoint: "endpoint:2135",
 			err:      false,
 		},
+		{
+			url:      "user:password",
+			user:     "user",
+			password: "password",
+			endpoint: "",
+			err:      false,
+		},
 	} {
 		t.Run("", func(t *testing.T) {
 			user, password, endpoint, err := parseParamCredentialsStaticValue(tt.url)
