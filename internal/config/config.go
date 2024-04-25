@@ -113,7 +113,7 @@ func parseParamCredentialsStaticValue(value string) (user, password, endpoint st
 		value = "blank://" + value
 	}
 	if !strings.Contains(value, "@") {
-		value = value + "@endpoint"
+		value += "@endpoint"
 		defer func() {
 			endpoint = ""
 		}()
