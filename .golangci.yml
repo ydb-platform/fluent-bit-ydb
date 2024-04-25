@@ -287,25 +287,13 @@ issues:
   # Show only new issues created in git patch with set file path.
   # new-from-patch: path/to/patch/file
   exclude-rules:
-    - path: internal/xatomic/type.go
+    - path: out_ydb.go
       linters:
-        - predeclared
+        - gci
     - path: _test\.go
       linters:
         - scopelint
-        - funlen
-        - unused
-        - unparam
         - gocritic
-    - path: topic/topicreader/reader_example_test.go
-      linters:
-        - staticcheck
-    - path: _test\.go
-      text: "ydb.Connection is deprecated"
-    - path: examples
-      linters:
-        - gomnd
-
       # Allow underscore and capital camel case for readability
       # Examples: Type_PRIMITIVE_TYPE_ID_UNSPECIFIED, Ydb_Discovery_V1, _voidValue
     - linters:

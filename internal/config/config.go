@@ -37,6 +37,7 @@ type credentialsDescription struct {
 
 func isFile(path string) bool {
 	_, err := os.Stat(path)
+
 	return err == nil
 }
 
@@ -46,6 +47,7 @@ var credentialsChooser = map[string]credentialsDescription{
 			if isFile(value) {
 				return yc.WithServiceAccountKeyFileCredentials(value), nil
 			}
+
 			return yc.WithServiceAccountKeyCredentials(value), nil
 		},
 		about: func() string {
@@ -75,6 +77,7 @@ var credentialsChooser = map[string]credentialsDescription{
 			if endpoint == "" {
 				return ydb.WithStaticCredentials(user, password), nil
 			}
+
 			return ydb.WithCredentials(credentials.NewStaticCredentials(user, password, endpoint)), nil
 		},
 		about: func() string {
@@ -125,6 +128,7 @@ func parseParamCredentialsStaticValue(value string) (user, password, endpoint st
 	user = u.User.Username()
 	password, _ = u.User.Password()
 	endpoint = u.Host
+
 	return
 }
 
@@ -155,14 +159,17 @@ func ydbCredentials(plugin unsafe.Pointer) (c ydb.Option, err error) {
 					params = append(params, paramName)
 				}
 				sort.Strings(params)
+
 				return params
 			}(),
 		)
 	case 1:
 		for _, v := range creds {
 			c = v
+
 			break
 		}
+
 		return c, nil
 	default:
 		return nil, fmt.Errorf("require only one of credentials params: %v",
@@ -171,6 +178,7 @@ func ydbCredentials(plugin unsafe.Pointer) (c ydb.Option, err error) {
 					params = append(params, paramName)
 				}
 				sort.Strings(params)
+
 				return params
 			}(),
 		)
