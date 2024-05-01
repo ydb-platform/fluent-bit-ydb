@@ -116,6 +116,14 @@ func (s *YDB) resolveFieldMapping(ctx context.Context) error {
 	return nil
 }
 
+const (
+	Sz8   = 8
+	Sz16  = 16
+	Sz32  = 32
+	Sz64  = 64
+	Sz30M = 30 * 1024 * 1024
+)
+
 func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 	optional, columnType := convertTypeIfOptional(t)
 	columnTypeYql := yqlType(columnType)
@@ -124,30 +132,31 @@ func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 		if optional {
 			switch columnTypeYql {
 			case timestampType:
-				return types.NullableTimestampValue(nil), 64, nil
+				return types.NullableTimestampValue(nil), Sz64, nil
 			case bytesType:
-				return types.NullableBytesValue(nil), 16, nil
+				return types.NullableBytesValue(nil), Sz16, nil
 			case textType:
-				return types.NullableTextValue(nil), 16, nil
+				return types.NullableTextValue(nil), Sz16, nil
 			case jsonType:
-				return types.NullableJSONValue(nil), 16, nil
+				return types.NullableJSONValue(nil), Sz16, nil
 			case jsonDocumentType:
-				return types.NullableJSONDocumentValue(nil), 16, nil
+				return types.NullableJSONDocumentValue(nil), Sz16, nil
 			}
 		} else {
 			switch columnTypeYql {
 			case timestampType:
-				return types.TimestampValueFromTime(time.UnixMicro(0)), 64, nil
+				return types.TimestampValueFromTime(time.UnixMicro(0)), Sz64, nil
 			case bytesType:
-				return types.BytesValue(make([]byte, 0)), 16, nil
+				return types.BytesValue(make([]byte, 0)), Sz16, nil
 			case textType:
-				return types.TextValue(""), 16, nil
+				return types.TextValue(""), Sz16, nil
 			case jsonType:
-				return types.JSONValue("{}"), 32, nil
+				return types.JSONValue("{}"), Sz32, nil
 			case jsonDocumentType:
-				return types.JSONDocumentValue("{}"), 32, nil
+				return types.JSONDocumentValue("{}"), Sz32, nil
 			}
 		}
+
 		return nil, -1, fmt.Errorf("not supported conversion from NULL to '%s' (%s)", columnTypeYql, t)
 	}
 
@@ -155,29 +164,29 @@ func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 	case time.Time:
 		switch columnTypeYql {
 		case timestampType:
-			return convertValueIfOptional(optional, types.TimestampValueFromTime(v)), 32, nil
+			return convertValueIfOptional(optional, types.TimestampValueFromTime(v)), Sz32, nil
 		default:
 			return nil, -1, fmt.Errorf("not supported conversion (time) from '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	case []byte:
 		switch columnTypeYql {
 		case bytesType:
-			return convertValueIfOptional(optional, types.BytesValue(v)), 8 + len(v), nil
+			return convertValueIfOptional(optional, types.BytesValue(v)), Sz8 + len(v), nil
 		case textType:
-			return convertValueIfOptional(optional, types.TextValue(string(v))), 8 + len(v), nil
+			return convertValueIfOptional(optional, types.TextValue(string(v))), Sz8 + len(v), nil
 		case timestampType:
-			return convertTimestamp(optional, string(v)), 64, nil
+			return convertTimestamp(optional, string(v)), Sz64, nil
 		default:
 			return nil, -1, fmt.Errorf("not supported conversion (bytes) from '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	case string:
 		switch columnTypeYql {
 		case bytesType:
-			return convertValueIfOptional(optional, types.BytesValueFromString(v)), 8 + len(v), nil
+			return convertValueIfOptional(optional, types.BytesValueFromString(v)), Sz8 + len(v), nil
 		case textType:
-			return convertValueIfOptional(optional, types.TextValue(v)), 8 + len(v), nil
+			return convertValueIfOptional(optional, types.TextValue(v)), Sz8 + len(v), nil
 		case timestampType:
-			return convertTimestamp(optional, v), 64, nil
+			return convertTimestamp(optional, v), Sz64, nil
 		default:
 			return nil, -1, fmt.Errorf("not supported conversion (string) from '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
@@ -189,15 +198,15 @@ func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 
 		switch columnTypeYql {
 		case bytesType:
-			return convertValueIfOptional(optional, types.BytesValue(j)), 8 + len(j), nil
+			return convertValueIfOptional(optional, types.BytesValue(j)), Sz8 + len(j), nil
 		case textType:
-			return convertValueIfOptional(optional, types.TextValue(string(j))), 8 + len(j), nil
+			return convertValueIfOptional(optional, types.TextValue(string(j))), Sz8 + len(j), nil
 		case jsonType:
-			return convertValueIfOptional(optional, types.JSONValue(string(j))), 8 + len(j), nil
+			return convertValueIfOptional(optional, types.JSONValue(string(j))), Sz8 + len(j), nil
 		case jsonDocumentType:
-			return convertValueIfOptional(optional, types.JSONDocumentValue(string(j))), 8 + len(j), nil
+			return convertValueIfOptional(optional, types.JSONDocumentValue(string(j))), Sz8 + len(j), nil
 		case timestampType:
-			return convertTimestamp(optional, string(j)), 64, nil
+			return convertTimestamp(optional, string(j)), Sz64, nil
 		default:
 			return nil, -1, fmt.Errorf("not supported conversion (map) '%s' to '%s' (%s)", v, columnTypeYql, t)
 		}
@@ -206,13 +215,14 @@ func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 	}
 }
 
-func (s *YDB) BuildColumnUsageMap() map[string]string {
-	m := make(map[string]string)
-	for k, v := range s.fieldMapping {
+func (s *YDB) BuildColumnUsageMap() map[string]bool {
+	m := make(map[string]bool)
+	for k := range s.fieldMapping {
 		if !strings.HasPrefix(k, ".") {
-			m[k] = v.Name
+			m[k] = true
 		}
 	}
+
 	return m
 }
 
@@ -228,15 +238,15 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 		if othersUsed {
 			othersValue = make(map[interface{}]interface{})
 		}
-		rowbytes := 128
-		columns := make([]types.StructValueOption, 0, colCount) //nolint:gomnd
+		rowbytes := Sz64 + Sz64
+		columns := make([]types.StructValueOption, 0, colCount)
 
 		v, vlen, err := type2Type(s.fieldMapping[config.KeyTimestamp].Type, event.Timestamp)
 		if err != nil {
 			return nil, -1, err
 		}
 		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyTimestamp].Name, v))
-		rowbytes += 64 + vlen
+		rowbytes += Sz64 + vlen
 		rowbytes += len(s.fieldMapping[config.KeyTimestamp].Name)
 
 		v, vlen, err = type2Type(s.fieldMapping[config.KeyInput].Type, event.Metadata)
@@ -244,7 +254,7 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 			return nil, -1, err
 		}
 		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyInput].Name, v))
-		rowbytes += 64 + vlen
+		rowbytes += Sz64 + vlen
 		rowbytes += len(s.fieldMapping[config.KeyInput].Name)
 
 		columnUsageMap := s.BuildColumnUsageMap()
@@ -257,16 +267,19 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 				} else {
 					log.Debug(fmt.Sprintf("column for message key: %s (value: %v) not found, skipped", field, value))
 				}
+
 				continue
 			}
 
-			v, vlen, err := type2Type(column.Type, value)
+			v, vlen, err = type2Type(column.Type, value)
 			if err != nil {
-				log.Warn(fmt.Sprintf("failed to convert column for message key: %s (value: %v), skipped. %v", field, value, err))
+				log.Warn(fmt.Sprintf("failed to convert column for message key: %s (value: %v), skipped. %v",
+					field, value, err))
+
 				continue
 			}
 			columns = append(columns, types.StructFieldValue(s.fieldMapping[field].Name, v))
-			rowbytes += 64 + vlen
+			rowbytes += Sz64 + vlen
 			rowbytes += len(s.fieldMapping[field].Name)
 			delete(columnUsageMap, field)
 		}
@@ -280,7 +293,7 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 					return nil, -1, err
 				}
 				columns = append(columns, types.StructFieldValue(cdef.Name, v))
-				rowbytes += 64 + vlen
+				rowbytes += Sz64 + vlen
 				rowbytes += len(cdef.Name)
 			}
 		}
@@ -291,7 +304,7 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 				return nil, -1, err
 			}
 			columns = append(columns, types.StructFieldValue(othersColumn.Name, v))
-			rowbytes += 64 + vlen
+			rowbytes += Sz64 + vlen
 			rowbytes += len(othersColumn.Name)
 		}
 
@@ -312,14 +325,15 @@ func (s *YDB) Write(events []*model.Event) error {
 	}
 	sz := len(events)
 	// split the rows into portions having size of no more than 30 megabytes
-	portion := (30 * 1024 * 1024) / maxrowbytes
+	portion := Sz30M / maxrowbytes
 	if portion < 1 {
 		portion = 1
 	}
 	if portion > sz {
 		portion = sz
 	}
-	log.Debug(fmt.Sprintf("Got events block of size %d with portion %d and %d max bytes per row...", sz, portion, maxrowbytes))
+	log.Debug(fmt.Sprintf("Got events block of size %d with portion %d and %d max bytes per row...",
+		sz, portion, maxrowbytes))
 	position := 0
 	for position < sz {
 		finish := position + portion
@@ -335,10 +349,10 @@ func (s *YDB) Write(events []*model.Event) error {
 		)
 		if err != nil {
 			log.Debug(fmt.Sprintf("...BulkUpsert failed: %v", err))
-			//break
-		} else {
-			log.Debug("...BulkUpsert succeeded")
+
+			break
 		}
+		log.Debug("...BulkUpsert succeeded")
 		position = finish
 	}
 
@@ -404,9 +418,13 @@ func convertValueIfOptional(optional bool, v types.Value) types.Value {
 	return v
 }
 
+const (
+	LenTimestamp3339 = 24
+)
+
 func convertTimestamp(optional bool, v string) types.Value {
 	var err error
-	if len(v) == 24 {
+	if len(v) == LenTimestamp3339 {
 		var tv time.Time
 		tv, err = time.Parse(time.RFC3339, v)
 		if err == nil {
@@ -421,6 +439,7 @@ func convertTimestamp(optional bool, v string) types.Value {
 	if optional {
 		return types.NullValue(types.TypeTimestamp)
 	}
+
 	return convertValueIfOptional(optional, types.TimestampValueFromTime(time.Now()))
 }
 
