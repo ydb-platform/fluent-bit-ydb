@@ -116,7 +116,7 @@ func TestType2TypeOk(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := type2Type(tc.column, tc.value)
+			actual, _, err := type2Type(tc.column, tc.value)
 
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
