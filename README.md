@@ -15,8 +15,7 @@
 ## Build
 
 ```makefile
-export BIN=out_ydb.so
-make build
+BIN=out_ydb.so make build
 ```
 
 # Usage 

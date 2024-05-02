@@ -19,6 +19,8 @@ import (
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
+
+	"github.com/surge/cityhash"
 )
 
 var (
@@ -226,36 +228,61 @@ func (s *YDB) BuildColumnUsageMap() map[string]bool {
 	return m
 }
 
+func (s *YDB) AppendColumnPlain(cref options.Column, in interface{}, rowbytes int, columns []types.StructValueOption) (
+	[]types.StructValueOption, int, error) {
+
+	v, vlen, err := type2Type(cref.Type, in)
+	if err != nil {
+		return columns, rowbytes, err
+	}
+
+	columns = append(columns, types.StructFieldValue(cref.Name, v))
+	rowbytes += Sz64 + vlen + len(cref.Name)
+
+	return columns, rowbytes, nil
+}
+
+func (s *YDB) AppendColumn(name string, in interface{}, rowbytes int, columns []types.StructValueOption) (
+	[]types.StructValueOption, int, error) {
+
+	cref, exists := s.fieldMapping[name]
+	if !exists {
+		return columns, rowbytes, errors.New("field does not exist: " + name)
+	}
+
+	return s.AppendColumnPlain(cref, in, rowbytes, columns)
+}
+
 func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 	rows := make([]types.Value, 0, len(events))
 	maxrowbytes := 1
 	colCount := len(s.fieldMapping)
 
-	var othersValue map[interface{}]interface{}
 	othersColumn, othersUsed := s.fieldMapping[config.KeyOthers]
+	hashColumn, hashUsed := s.fieldMapping[config.KeyHash]
+
+	var othersValue map[interface{}]interface{}
+	var hashValue map[interface{}]interface{}
+	var err error
 
 	for _, event := range events {
 		if othersUsed {
 			othersValue = make(map[interface{}]interface{})
 		}
+		if hashUsed {
+			hashValue = make(map[interface{}]interface{})
+		}
 		rowbytes := Sz64 + Sz64
 		columns := make([]types.StructValueOption, 0, colCount)
 
-		v, vlen, err := type2Type(s.fieldMapping[config.KeyTimestamp].Type, event.Timestamp)
+		columns, rowbytes, err = s.AppendColumn(config.KeyTimestamp, event.Timestamp, rowbytes, columns)
 		if err != nil {
 			return nil, -1, err
 		}
-		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyTimestamp].Name, v))
-		rowbytes += Sz64 + vlen
-		rowbytes += len(s.fieldMapping[config.KeyTimestamp].Name)
-
-		v, vlen, err = type2Type(s.fieldMapping[config.KeyInput].Type, event.Metadata)
+		columns, rowbytes, err = s.AppendColumn(config.KeyInput, event.Metadata, rowbytes, columns)
 		if err != nil {
 			return nil, -1, err
 		}
-		columns = append(columns, types.StructFieldValue(s.fieldMapping[config.KeyInput].Name, v))
-		rowbytes += Sz64 + vlen
-		rowbytes += len(s.fieldMapping[config.KeyInput].Name)
 
 		columnUsageMap := s.BuildColumnUsageMap()
 
@@ -264,6 +291,9 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 			if !exists {
 				if othersUsed {
 					othersValue[field] = value
+					if hashUsed {
+						hashValue[field] = value
+					}
 				} else {
 					log.Debug(fmt.Sprintf("column for message key: %s (value: %v) not found, skipped", field, value))
 				}
@@ -271,41 +301,48 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 				continue
 			}
 
-			v, vlen, err = type2Type(column.Type, value)
+			columns, rowbytes, err = s.AppendColumnPlain(column, value, rowbytes, columns)
 			if err != nil {
 				log.Warn(fmt.Sprintf("failed to convert column for message key: %s (value: %v), skipped. %v",
 					field, value, err))
 
 				continue
 			}
-			columns = append(columns, types.StructFieldValue(s.fieldMapping[field].Name, v))
-			rowbytes += Sz64 + vlen
-			rowbytes += len(s.fieldMapping[field].Name)
+
 			delete(columnUsageMap, field)
+			if hashUsed {
+				hashValue[field] = value
+			}
 		}
 
 		if len(columnUsageMap) > 0 {
 			// some columns were not included
 			for cname := range columnUsageMap {
-				cdef := s.fieldMapping[cname]
-				v, vlen, err = type2Type(cdef.Type, nil)
+				columns, rowbytes, err = s.AppendColumn(cname, nil, rowbytes, columns)
 				if err != nil {
+					// this error cannot be skipped
 					return nil, -1, err
 				}
-				columns = append(columns, types.StructFieldValue(cdef.Name, v))
-				rowbytes += Sz64 + vlen
-				rowbytes += len(cdef.Name)
 			}
 		}
 
 		if othersUsed {
-			v, vlen, err := type2Type(othersColumn.Type, othersValue)
+			columns, rowbytes, err = s.AppendColumnPlain(othersColumn, othersValue, rowbytes, columns)
 			if err != nil {
 				return nil, -1, err
 			}
-			columns = append(columns, types.StructFieldValue(othersColumn.Name, v))
-			rowbytes += Sz64 + vlen
-			rowbytes += len(othersColumn.Name)
+		}
+
+		if hashUsed {
+			j, err := json.Marshal(convertByteFieldsToString(hashValue))
+			if err != nil {
+				return nil, -1, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, hashValue)
+			}
+			hashval := cityhash.CityHash64(j, uint32(len(j)))
+			columns, rowbytes, err = s.AppendColumnPlain(hashColumn, hashval, rowbytes, columns)
+			if err != nil {
+				return nil, -1, err
+			}
 		}
 
 		rows = append(rows, types.StructValue(columns...))
