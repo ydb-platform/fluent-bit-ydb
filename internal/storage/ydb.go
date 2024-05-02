@@ -77,6 +77,7 @@ const (
 	jsonType         = "Json"
 	jsonDocumentType = "JsonDocument"
 	timestampType    = "Timestamp"
+	uint64Type       = "Uint64"
 )
 
 func (s *YDB) resolveFieldMapping(ctx context.Context) error {
@@ -191,6 +192,13 @@ func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 			return convertTimestamp(optional, v), Sz64, nil
 		default:
 			return nil, -1, fmt.Errorf("not supported conversion (string) from '%s' to '%s' (%s)", v, columnTypeYql, t)
+		}
+	case uint64:
+		switch columnTypeYql {
+		case uint64Type:
+			return convertValueIfOptional(optional, types.Uint64Value(v)), Sz8 + Sz8, nil
+		default:
+			return nil, -1, fmt.Errorf("not supported conversion (uint64) from '%v' to '%s' (%s)", v, columnTypeYql, t)
 		}
 	case map[interface{}]interface{}:
 		j, err := json.Marshal(convertByteFieldsToString(v))
