@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/surge/cityhash"
 	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
@@ -19,8 +20,6 @@ import (
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/model"
-
-	"github.com/surge/cityhash"
 )
 
 var (
@@ -127,40 +126,44 @@ const (
 	Sz30M = 30 * 1024 * 1024
 )
 
+func null2Type(t types.Type, optional bool, columnTypeYql string) (types.Value, int, error) {
+	if optional {
+		switch columnTypeYql {
+		case timestampType:
+			return types.NullableTimestampValue(nil), Sz64, nil
+		case bytesType:
+			return types.NullableBytesValue(nil), Sz16, nil
+		case textType:
+			return types.NullableTextValue(nil), Sz16, nil
+		case jsonType:
+			return types.NullableJSONValue(nil), Sz16, nil
+		case jsonDocumentType:
+			return types.NullableJSONDocumentValue(nil), Sz16, nil
+		}
+	} else {
+		switch columnTypeYql {
+		case timestampType:
+			return types.TimestampValueFromTime(time.UnixMicro(0)), Sz64, nil
+		case bytesType:
+			return types.BytesValue(make([]byte, 0)), Sz16, nil
+		case textType:
+			return types.TextValue(""), Sz16, nil
+		case jsonType:
+			return types.JSONValue("{}"), Sz32, nil
+		case jsonDocumentType:
+			return types.JSONDocumentValue("{}"), Sz32, nil
+		}
+	}
+
+	return nil, -1, fmt.Errorf("not supported conversion from NULL to '%s' (%s)", columnTypeYql, t)
+}
+
 func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
 	optional, columnType := convertTypeIfOptional(t)
 	columnTypeYql := yqlType(columnType)
 
 	if v == nil {
-		if optional {
-			switch columnTypeYql {
-			case timestampType:
-				return types.NullableTimestampValue(nil), Sz64, nil
-			case bytesType:
-				return types.NullableBytesValue(nil), Sz16, nil
-			case textType:
-				return types.NullableTextValue(nil), Sz16, nil
-			case jsonType:
-				return types.NullableJSONValue(nil), Sz16, nil
-			case jsonDocumentType:
-				return types.NullableJSONDocumentValue(nil), Sz16, nil
-			}
-		} else {
-			switch columnTypeYql {
-			case timestampType:
-				return types.TimestampValueFromTime(time.UnixMicro(0)), Sz64, nil
-			case bytesType:
-				return types.BytesValue(make([]byte, 0)), Sz16, nil
-			case textType:
-				return types.TextValue(""), Sz16, nil
-			case jsonType:
-				return types.JSONValue("{}"), Sz32, nil
-			case jsonDocumentType:
-				return types.JSONDocumentValue("{}"), Sz32, nil
-			}
-		}
-
-		return nil, -1, fmt.Errorf("not supported conversion from NULL to '%s' (%s)", columnTypeYql, t)
+		return null2Type(t, optional, columnTypeYql)
 	}
 
 	switch v := v.(type) {
@@ -237,8 +240,8 @@ func (s *YDB) BuildColumnUsageMap() map[string]bool {
 }
 
 func (s *YDB) AppendColumnPlain(cref options.Column, in interface{}, rowbytes int, columns []types.StructValueOption) (
-	[]types.StructValueOption, int, error) {
-
+	[]types.StructValueOption, int, error,
+) {
 	v, vlen, err := type2Type(cref.Type, in)
 	if err != nil {
 		return columns, rowbytes, err
@@ -251,8 +254,8 @@ func (s *YDB) AppendColumnPlain(cref options.Column, in interface{}, rowbytes in
 }
 
 func (s *YDB) AppendColumn(name string, in interface{}, rowbytes int, columns []types.StructValueOption) (
-	[]types.StructValueOption, int, error) {
-
+	[]types.StructValueOption, int, error,
+) {
 	cref, exists := s.fieldMapping[name]
 	if !exists {
 		return columns, rowbytes, errors.New("field does not exist: " + name)
