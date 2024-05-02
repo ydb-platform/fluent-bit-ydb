@@ -28,6 +28,8 @@ const (
 
 	KeyTimestamp = ".timestamp"
 	KeyInput     = ".input"
+	KeyOthers    = ".others"
+	KeyHash      = ".hash"
 )
 
 type credentialsDescription struct {
