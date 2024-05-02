@@ -1,4 +1,3 @@
-## 
 * Add the logic to automatically limit the request sizes for BulkUpsert, to avoid the ingestion errors
 * Save extra input fields as the (optional) additional JSON-formatted field named `.other`
 * Support for flexible schema parsers like `logfmt` on input
