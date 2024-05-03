@@ -1,30 +1,33 @@
 package log
 
 import (
+	"os"
+
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
+var logger = zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.Disabled)
+
 func SetLevel(lvl zerolog.Level) {
-	zerolog.SetGlobalLevel(lvl)
+	logger = logger.Level(lvl)
 }
 
 func Debug(msg string) {
-	log.Debug().Msg(msg)
+	logger.Debug().Msg(msg)
 }
 
 func Warn(msg string) {
-	log.Warn().Msg(msg)
+	logger.Warn().Msg(msg)
 }
 
 func Info(msg string) {
-	log.Info().Msg(msg)
+	logger.Info().Msg(msg)
 }
 
 func Error(msg string) {
-	log.Error().Msg(msg)
+	logger.Error().Msg(msg)
 }
 
 func Fatal(msg string) {
-	log.Fatal().Msg(msg)
+	logger.Fatal().Msg(msg)
 }
