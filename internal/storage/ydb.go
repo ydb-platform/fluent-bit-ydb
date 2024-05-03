@@ -16,6 +16,7 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
@@ -378,33 +379,36 @@ func (s *YDB) Write(events []*model.Event) error {
 	if portion > sz {
 		portion = sz
 	}
-	position := 0
+	var (
+		position = 0
+		writes   = errgroup.Group{}
+	)
 	for position < sz {
 		finish := position + portion
 		if finish > sz {
 			finish = sz
 		}
 		part := rows[position:finish]
-		err = s.db.Table().Do(context.Background(),
-			func(ctx context.Context, sess table.Session) error {
-				return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(part...))
-			},
-		)
-		if err != nil {
-			if ydb.IsOperationErrorSchemeError(err) {
-				log.Warn("Detected scheme error, trying to resolve field mapping from table description")
-				resolveErr := s.resolveFieldMapping(context.Background())
-				if resolveErr != nil {
-					return errors.Join(err, resolveErr)
-				}
-			}
-
-			return err
-		}
+		writes.Go(func() error {
+			return s.db.Table().Do(context.Background(),
+				func(ctx context.Context, sess table.Session) error {
+					return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(part...))
+				},
+				table.WithIdempotent(),
+			)
+		})
 		position = finish
 	}
 
-	return nil
+	err = writes.Wait()
+	if err != nil && ydb.IsOperationErrorSchemeError(err) {
+		log.Warn("Detected scheme error, trying to resolve field mapping from table description")
+		if resolveErr := s.resolveFieldMapping(context.Background()); resolveErr != nil {
+			return errors.Join(err, resolveErr)
+		}
+	}
+
+	return err
 }
 
 func (s *YDB) Exit() error {
