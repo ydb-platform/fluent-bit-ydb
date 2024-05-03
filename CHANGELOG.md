@@ -1,3 +1,4 @@
+## v1.2.0
 * Switched the internal plugin logger from `fmt`  to `zerolog` with default logging level `zerolog.Disabled`
 * Added optional parameter of ydb output plugin `LogLevel` (if not defined - plugin logging disabled)
 * Added the logic to automatically limit the request sizes for `BulkUpsert`, to avoid the ingestion errors
