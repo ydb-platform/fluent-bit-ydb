@@ -467,12 +467,14 @@ func convertValueIfOptional(optional bool, v types.Value) types.Value {
 }
 
 const (
-	LenTimestamp3339 = 24
+	// Number of numerical characters after dot may be different.
+	// The longest one is probably this: 2024-05-02T12:36:13.395105207Z
+	LenTimestamp3339 = 22
 )
 
 func convertTimestamp(optional bool, v string) types.Value {
 	var err error
-	if len(v) == LenTimestamp3339 {
+	if len(v) >= LenTimestamp3339 {
 		var tv time.Time
 		tv, err = time.Parse(time.RFC3339, v)
 		if err == nil {
