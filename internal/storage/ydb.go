@@ -391,7 +391,6 @@ func (s *YDB) Write(events []*model.Event) error {
 			},
 		)
 		if err != nil {
-
 			break
 		}
 		position = finish
