@@ -398,6 +398,7 @@ func (s *YDB) Write(events []*model.Event) error {
 					return errors.Join(err, resolveErr)
 				}
 			}
+
 			return err
 		}
 		position = finish
