@@ -391,20 +391,19 @@ func (s *YDB) Write(events []*model.Event) error {
 			},
 		)
 		if err != nil {
-			break
+			if ydb.IsOperationErrorSchemeError(err) {
+				log.Warn("Detected scheme error, trying to resolve field mapping from table description")
+				resolveErr := s.resolveFieldMapping(context.Background())
+				if resolveErr != nil {
+					return errors.Join(err, resolveErr)
+				}
+			}
+			return err
 		}
 		position = finish
 	}
 
-	if ydb.IsOperationErrorSchemeError(err) {
-		log.Warn("Detected scheme error, trying to resolve field mapping from table description")
-		resolveErr := s.resolveFieldMapping(context.Background())
-		if resolveErr != nil {
-			return errors.Join(err, resolveErr)
-		}
-	}
-
-	return err
+	return nil
 }
 
 func (s *YDB) Exit() error {
