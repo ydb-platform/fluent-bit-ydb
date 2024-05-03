@@ -28,6 +28,8 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		return output.FLB_ERROR
 	}
 
+	log.SetLevel(cfg.LogLevel)
+
 	s, err := storage.New(&cfg)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed create new storage: %v", err))

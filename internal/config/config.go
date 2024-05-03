@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/fluent/fluent-bit-go/output"
+	"github.com/rs/zerolog"
 	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/credentials"
 	yc "github.com/ydb-platform/ydb-go-yc"
@@ -25,6 +26,7 @@ const (
 	ParamCredentialsStatic              = "CredentialsStatic"
 	ParamCredentialsToken               = "CredentialsToken"
 	ParamCredentialsAnonymous           = "CredentialsAnonymous"
+	ParamLogLevel                       = "LogLevel"
 
 	KeyTimestamp = ".timestamp"
 	KeyInput     = ".input"
@@ -140,6 +142,7 @@ type Config struct {
 	CredentialsOption ydb.Option
 	TablePath         string
 	Columns           map[string]string
+	LogLevel          zerolog.Level
 }
 
 func ydbCredentials(plugin unsafe.Pointer) (c ydb.Option, err error) {
@@ -248,6 +251,13 @@ func ReadConfigFromPlugin(plugin unsafe.Pointer) (cfg Config, _ error) {
 		return cfg, fmt.Errorf("required valid credentials")
 	}
 	cfg.CredentialsOption = creds
+
+	// log level
+	if lvl, err := zerolog.ParseLevel(output.FLBPluginConfigKey(plugin, ParamLogLevel)); err != nil {
+		cfg.LogLevel = zerolog.Disabled
+	} else {
+		cfg.LogLevel = lvl
+	}
 
 	return cfg, nil
 }
