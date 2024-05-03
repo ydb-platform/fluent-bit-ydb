@@ -305,8 +305,6 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 					if hashUsed {
 						hashValue[field] = value
 					}
-				} else {
-					log.Debug(fmt.Sprintf("column for message key: %s (value: %v) not found, skipped", field, value))
 				}
 
 				continue
@@ -380,8 +378,6 @@ func (s *YDB) Write(events []*model.Event) error {
 	if portion > sz {
 		portion = sz
 	}
-	log.Debug(fmt.Sprintf("Got events block of size %d with portion %d and %d max bytes per row...",
-		sz, portion, maxrowbytes))
 	position := 0
 	for position < sz {
 		finish := position + portion
@@ -389,30 +385,26 @@ func (s *YDB) Write(events []*model.Event) error {
 			finish = sz
 		}
 		part := rows[position:finish]
-		log.Debug(fmt.Sprintf("...Processing positions [%d:%d], size %d", position, finish, len(part)))
 		err = s.db.Table().Do(context.Background(),
 			func(ctx context.Context, sess table.Session) error {
 				return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(part...))
 			},
 		)
 		if err != nil {
-			log.Debug(fmt.Sprintf("...BulkUpsert failed: %v", err))
+			if ydb.IsOperationErrorSchemeError(err) {
+				log.Warn("Detected scheme error, trying to resolve field mapping from table description")
+				resolveErr := s.resolveFieldMapping(context.Background())
+				if resolveErr != nil {
+					return errors.Join(err, resolveErr)
+				}
+			}
 
-			break
+			return err
 		}
-		log.Debug("...BulkUpsert succeeded")
 		position = finish
 	}
 
-	if ydb.IsOperationErrorSchemeError(err) {
-		log.Warn("Detected scheme error, trying to resolve field mapping from table description")
-		resolveErr := s.resolveFieldMapping(context.Background())
-		if resolveErr != nil {
-			return errors.Join(err, resolveErr)
-		}
-	}
-
-	return err
+	return nil
 }
 
 func (s *YDB) Exit() error {
@@ -467,12 +459,14 @@ func convertValueIfOptional(optional bool, v types.Value) types.Value {
 }
 
 const (
-	LenTimestamp3339 = 24
+	// Number of numerical characters after dot may be different.
+	// The longest one is probably this: 2024-05-02T12:36:13.395105207Z
+	LenTimestamp3339 = 22
 )
 
 func convertTimestamp(optional bool, v string) types.Value {
 	var err error
-	if len(v) == LenTimestamp3339 {
+	if len(v) >= LenTimestamp3339 {
 		var tv time.Time
 		tv, err = time.Parse(time.RFC3339, v)
 		if err == nil {
