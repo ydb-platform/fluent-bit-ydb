@@ -305,8 +305,6 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 					if hashUsed {
 						hashValue[field] = value
 					}
-				} else {
-					log.Debug(fmt.Sprintf("column for message key: %s (value: %v) not found, skipped", field, value))
 				}
 
 				continue
@@ -380,8 +378,6 @@ func (s *YDB) Write(events []*model.Event) error {
 	if portion > sz {
 		portion = sz
 	}
-	log.Debug(fmt.Sprintf("Got events block of size %d with portion %d and %d max bytes per row...",
-		sz, portion, maxrowbytes))
 	position := 0
 	for position < sz {
 		finish := position + portion
@@ -389,18 +385,15 @@ func (s *YDB) Write(events []*model.Event) error {
 			finish = sz
 		}
 		part := rows[position:finish]
-		log.Debug(fmt.Sprintf("...Processing positions [%d:%d], size %d", position, finish, len(part)))
 		err = s.db.Table().Do(context.Background(),
 			func(ctx context.Context, sess table.Session) error {
 				return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(part...))
 			},
 		)
 		if err != nil {
-			log.Debug(fmt.Sprintf("...BulkUpsert failed: %v", err))
 
 			break
 		}
-		log.Debug("...BulkUpsert succeeded")
 		position = finish
 	}
 
