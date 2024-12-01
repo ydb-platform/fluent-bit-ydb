@@ -1,6 +1,8 @@
 module github.com/ydb-platform/fluent-bit-ydb
 
-go 1.22
+go 1.22.7
+
+toolchain go1.23.0
 
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
