@@ -254,7 +254,7 @@ func ReadConfigFromPlugin(plugin unsafe.Pointer) (cfg Config, _ error) {
 
 	// log level
 	if lvl, err := zerolog.ParseLevel(output.FLBPluginConfigKey(plugin, ParamLogLevel)); err != nil {
-		cfg.LogLevel = zerolog.Disabled
+		cfg.LogLevel = zerolog.InfoLevel
 	} else {
 		cfg.LogLevel = lvl
 	}

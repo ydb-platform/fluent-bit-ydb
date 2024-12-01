@@ -42,7 +42,7 @@ The plugin supports the following configuration settings:
 | CredentialsStatic | Username and password for YDB authentication, specified in the following format: `username:password@` |
 | CredentialsToken | Custom token value, to use the token authentication YDB mode |
 | Certificates | Path to the certificate authority (CA) trusted certificates file, or the literal trusted CA certificate value |
-| LogLevel | Plugin specific logging level, should be one of `disabled`, `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `panic` |
+| LogLevel | Plugin specific logging level, should be one of `disabled`, `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `panic` (`info` is the default) |
 
 The following pseudo-fields are available, in addition to those available in the FluentBit record, to be mapped into the YDB table columns:
 
