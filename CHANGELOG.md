@@ -1,3 +1,6 @@
+* Upgraded `ydb-go-sdk` dependency
+* Set `info` as default log-level for fluent-bit ydb plugin
+
 ## v1.2.0
 * Switched the internal plugin logger from `fmt`  to `zerolog` with default logging level `zerolog.Disabled`
 * Added optional parameter of ydb output plugin `LogLevel` (if not defined - plugin logging disabled)
