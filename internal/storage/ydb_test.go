@@ -113,8 +113,6 @@ func TestType2TypeOk(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			actual, _, err := type2Type(tc.column, tc.value)
 
