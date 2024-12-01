@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -248,7 +249,7 @@ func ReadConfigFromPlugin(plugin unsafe.Pointer) (cfg Config, _ error) {
 	// credentials
 	creds, err := ydbCredentials(plugin)
 	if err != nil {
-		return cfg, fmt.Errorf("required valid credentials")
+		return cfg, errors.New("required valid credentials")
 	}
 	cfg.CredentialsOption = creds
 

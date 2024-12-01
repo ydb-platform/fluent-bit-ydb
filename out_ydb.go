@@ -71,7 +71,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		var timestamp time.Time
 		switch t := ts.(type) {
 		case output.FLBTime:
-			timestamp = ts.(output.FLBTime).Time
+			timestamp = ts.(output.FLBTime).Time //nolint:forcetypeassert
 		case uint64:
 			timestamp = time.Unix(int64(t), 0)
 		default:

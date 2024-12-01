@@ -1,8 +1,6 @@
 module github.com/ydb-platform/fluent-bit-ydb
 
-go 1.22.7
-
-toolchain go1.23.3
+go 1.22
 
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
@@ -11,6 +9,7 @@ require (
 	github.com/surge/cityhash v0.0.0-20131128155616-cdd6a94144ab
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.92.6
 	github.com/ydb-platform/ydb-go-yc v0.12.1
+	golang.org/x/sync v0.9.0
 )
 
 require (
@@ -26,7 +25,6 @@ require (
 	github.com/ydb-platform/ydb-go-genproto v0.0.0-20241112172322-ea1f63298f77 // indirect
 	github.com/ydb-platform/ydb-go-yc-metadata v0.6.1 // indirect
 	golang.org/x/net v0.31.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.20.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect

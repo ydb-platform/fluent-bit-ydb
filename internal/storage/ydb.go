@@ -40,7 +40,7 @@ type YDB struct {
 }
 
 func New(cfg *config.Config) (*YDB, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:gomnd
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	opts := []ydb.Option{cfg.CredentialsOption}
@@ -159,7 +159,7 @@ func null2Type(t types.Type, optional bool, columnTypeYql string) (types.Value, 
 	return nil, -1, fmt.Errorf("not supported conversion from NULL to '%s' (%s)", columnTypeYql, t)
 }
 
-func type2Type(t types.Type, v interface{}) (types.Value, int, error) {
+func type2Type(t types.Type, v interface{}) (types.Value, int, error) { //nolint:funlen
 	optional, columnType := convertTypeIfOptional(t)
 	columnTypeYql := yqlType(columnType)
 
@@ -265,7 +265,7 @@ func (s *YDB) AppendColumn(name string, in interface{}, rowbytes int, columns []
 	return s.AppendColumnPlain(cref, in, rowbytes, columns)
 }
 
-func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
+func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) { //nolint:funlen
 	rows := make([]types.Value, 0, len(events))
 	maxrowbytes := 1
 	colCount := len(s.fieldMapping)
@@ -348,7 +348,7 @@ func (s *YDB) ConvertRows(events []*model.Event) ([]types.Value, int, error) {
 			if err != nil {
 				return nil, -1, fmt.Errorf("failed to marshal json value: %w. Value: %#v", err, hashValue)
 			}
-			hashval := cityhash.CityHash64(j, uint32(len(j)))
+			hashval := cityhash.CityHash64(j, uint32(len(j))) //nolint:gosec
 			columns, rowbytes, err = s.AppendColumnPlain(hashColumn, hashval, rowbytes, columns)
 			if err != nil {
 				return nil, -1, err
@@ -390,11 +390,9 @@ func (s *YDB) Write(events []*model.Event) error {
 		}
 		part := rows[position:finish]
 		writes.Go(func() error {
-			return s.db.Table().Do(context.Background(),
-				func(ctx context.Context, sess table.Session) error {
-					return sess.BulkUpsert(ctx, path.Join(s.db.Name(), s.cfg.TablePath), types.ListValue(part...))
-				},
-				table.WithIdempotent(),
+			return s.db.Table().BulkUpsert(context.Background(),
+				path.Join(s.db.Name(), s.cfg.TablePath),
+				table.BulkUpsertDataRows(types.ListValue(part...)),
 			)
 		})
 		position = finish
@@ -430,7 +428,7 @@ func convertByteFieldsToString(in map[interface{}]interface{}) map[string]interf
 	out := make(map[string]interface{}, len(in))
 
 	for key, value := range in {
-		key := key.(string)
+		key := key.(string) //nolint:forcetypeassert
 
 		switch value := value.(type) {
 		case map[interface{}]interface{}:
