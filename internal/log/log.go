@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var logger = zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.Disabled)
+var logger = zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 
 func SetLevel(lvl zerolog.Level) {
 	logger = logger.Level(lvl)
