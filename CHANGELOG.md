@@ -1,6 +1,5 @@
 * Upgraded `ydb-go-sdk` dependency
-* Added `CredentialsStaticLogin` and `CredentialsStaticPassword` configuration parameters
-* Marked as deprecated `CredentialsStatic` configuration parameter
+* Added `CredentialsStaticLogin` and `CredentialsStaticPassword` configuration parameters (alternatively for parameter `CredentialsStatic`)
 
 ## v1.3.0
 * Upgraded `ydb-go-sdk` dependency
