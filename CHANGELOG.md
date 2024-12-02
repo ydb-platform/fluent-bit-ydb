@@ -1,3 +1,4 @@
+## v1.4.0
 * Upgraded `ydb-go-sdk` dependency
 * Added `CredentialsStaticLogin` and `CredentialsStaticPassword` configuration parameters (alternatively for parameter `CredentialsStatic`)
 
