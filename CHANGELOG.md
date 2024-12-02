@@ -1,3 +1,6 @@
+* Upgraded `ydb-go-sdk` dependency
+* Added `CredentialsStaticLogin` and `CredentialsStaticPassword` configuration parameters (alternatively for parameter `CredentialsStatic`)
+
 ## v1.3.0
 * Upgraded `ydb-go-sdk` dependency
 * Set `info` as default log-level for fluent-bit ydb plugin
