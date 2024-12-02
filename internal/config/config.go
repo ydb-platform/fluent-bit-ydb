@@ -25,6 +25,8 @@ const (
 	ParamCredentialsYcServiceAccountKey = "CredentialsYcServiceAccountKey"
 	ParamCredentialsYcMetadata          = "CredentialsYcMetadata"
 	ParamCredentialsStatic              = "CredentialsStatic"
+	ParamCredentialsStaticLogin         = "CredentialsStaticLogin"
+	ParamCredentialsStaticPassword      = "CredentialsStaticPassword"
 	ParamCredentialsToken               = "CredentialsToken"
 	ParamCredentialsAnonymous           = "CredentialsAnonymous"
 	ParamLogLevel                       = "LogLevel"
@@ -87,7 +89,29 @@ var credentialsChooser = map[string]credentialsDescription{
 		},
 		about: func() string {
 			return fmt.Sprintf(
-				"value of parameter '%s' must be a string with template 'user:password'",
+				"(deprecated) value of parameter '%s' must be a string with template 'user:password'",
+				ParamCredentialsStatic,
+			)
+		},
+	},
+	ParamCredentialsStaticLogin: {
+		make: func(value string) (ydb.Option, error) {
+			return ydb.WithStaticCredentialsLogin(value), nil
+		},
+		about: func() string {
+			return fmt.Sprintf(
+				"value of parameter '%s' must be a string with static credentials login",
+				ParamCredentialsStatic,
+			)
+		},
+	},
+	ParamCredentialsStaticPassword: {
+		make: func(value string) (ydb.Option, error) {
+			return ydb.WithStaticCredentialsPassword(value), nil
+		},
+		about: func() string {
+			return fmt.Sprintf(
+				"value of parameter '%s' must be a string with static credentials password",
 				ParamCredentialsStatic,
 			)
 		},

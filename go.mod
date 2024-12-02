@@ -9,7 +9,7 @@ require (
 	github.com/rs/zerolog v1.32.0
 	github.com/stretchr/testify v1.8.3
 	github.com/surge/cityhash v0.0.0-20131128155616-cdd6a94144ab
-	github.com/ydb-platform/ydb-go-sdk/v3 v3.92.6
+	github.com/ydb-platform/ydb-go-sdk/v3 v3.93.0
 	github.com/ydb-platform/ydb-go-yc v0.12.1
 	golang.org/x/sync v0.9.0
 )
