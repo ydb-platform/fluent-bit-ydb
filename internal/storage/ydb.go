@@ -49,7 +49,7 @@ func New(cfg *config.Config) (*YDB, error) {
 		cfg.CredentialsOption,
 		ydb.With(
 			ydbConfig.WithGrpcOptions(
-				grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": "pick_first"}`),
+				grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"pick_first":{}}]}`),
 			),
 		),
 	}
