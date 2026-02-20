@@ -13,10 +13,12 @@ import (
 
 	"github.com/surge/cityhash"
 	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
+	ydbConfig "github.com/ydb-platform/ydb-go-sdk/v3/config"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/options"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/ydb-platform/fluent-bit-ydb/internal/config"
 	"github.com/ydb-platform/fluent-bit-ydb/internal/log"
@@ -43,7 +45,14 @@ func New(cfg *config.Config) (*YDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	opts := []ydb.Option{cfg.CredentialsOption}
+	opts := []ydb.Option{
+		cfg.CredentialsOption,
+		ydb.With(
+			ydbConfig.WithGrpcOptions(
+				grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"pick_first":{}}]}`),
+			),
+		),
+	}
 	if cfg.Certificates != "" {
 		_, err := os.Stat(cfg.Certificates)
 		if err == nil {
